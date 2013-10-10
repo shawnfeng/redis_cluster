@@ -78,50 +78,38 @@ static void l_acquire (EV_P)
 	u->re()->lock();
 }
 
+static void redisrvs_add(redisReply *rp, RedisRv &rv)
+{
+	if (!rp) return;
+
+  rv.type = rp->type;
+  rv.integer = rp->integer;
+  if (rp->str) rv.str.assign(rp->str, rp->len); 
+
+  if (rp->type == REDIS_REPLY_ARRAY) {
+    for (size_t i = 0; i < rp->elements; ++i) {
+      RedisRv tmp_rv;
+      redisrvs_add(rp->element[i], tmp_rv);
+      rv.element.push_back(tmp_rv);
+    }
+  }
+
+}
+
 static void redisrp_redisrvs(redisReply *reply, cmd_arg_t &carg, uint64_t addr)
 {
 	if (!reply) return;
 
-	RedisRvs &rv = *carg.rv;
+	RedisRvs &rvs = *carg.rv;
   map<uint64_t, RedisRv> &err = carg.err;
 
-	redisReply *rp = NULL;
-	int ele = reply->elements;
-	struct redisReply **eles = reply->element;
-
   if (reply->type != REDIS_REPLY_ERROR) {
-    RedisRvs::iterator rit =
-      rv.insert(pair< uint64_t, std::vector<RedisRv> >(addr, vector<RedisRv>())).first;
-                do {
-                  if (0 == ele ) {
-                    rp = reply;
-                  } else {
-                    rp = *eles++;
-                  }
-
-                  RedisRv r;
-                  r.type = rp->type;
-                  r.integer = rp->integer;
-                  r.len = rp->len;
-
-                  rit->second.push_back(r);
-                  if (rp->str != NULL) {
-                    rit->second.back().str.assign(rp->str, rp->len); 
-                  }
-
-                  // 暂时不支持嵌套结构的返回
-                } while (--ele > 0);
-
-
-
+    RedisRvs::iterator it =
+      rvs.insert(pair< uint64_t, RedisRv >(addr, RedisRv())).first;
+    redisrvs_add(reply, it->second);
   } else {
 		RedisRv e;
-		e.type = reply->type;
-		e.integer = reply->integer;
-		e.len = reply->len;
-    if (reply->str) {
-      e.str.assign(reply->str, reply->len); 
-    }
+    redisrvs_add(reply, e);
     err[addr] = e;
   }
 
@@ -437,4 +425,47 @@ redisAsyncContext *userdata_t::lookup(uint64_t addr)
 	} else {
 		return it->second;
 	}
+}
+
+//==========
+void RedisRv::dump(LogOut *logout, const char *pref, int lv, int depth) const
+{
+  const char *fun = "RedisRv::dump";
+  void (LogOut::*log)(const char *format, ...);
+  log = &LogOut::trace;
+
+  switch (lv) {
+  case 0:
+      log = &LogOut::trace;
+      break;
+  case 1:
+      log = &LogOut::debug;
+      break;
+  case 2:
+      log = &LogOut::info;
+      break;
+  case 3:
+      log = &LogOut::warn;
+      break;
+  case 4:
+      log = &LogOut::error;
+      break;
+  default:
+    break;
+
+  }
+
+  string log_depth;
+  log_depth.assign(depth*2, '*');
+
+  (logout->*log)("%s-->%s %s type:%d intger:%d str:%s ele:%lu",
+                 fun, pref, log_depth.c_str(), type, integer, str.c_str(), element.size());
+
+  if (type == REDIS_REPLY_ARRAY) {
+    for (vector<RedisRv>::const_iterator it = element.begin();
+         it != element.end(); ++it) {
+      it->dump(logout, pref, lv, depth+1);
+    }
+  }
+
 }

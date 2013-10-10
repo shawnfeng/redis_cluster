@@ -66,13 +66,15 @@ class ReqCount {
 };
 
 struct RedisRv {
-    int type; /* REDIS_REPLY_* */
-    long long integer; /* The integer when type is REDIS_REPLY_INTEGER */
-    int len; /* Length of string */
-    std::string str; /* Used for both REDIS_REPLY_ERROR and REDIS_REPLY_STRING */
+  int type; /* REDIS_REPLY_* */
+  long long integer; /* The integer when type is REDIS_REPLY_INTEGER */
+  std::string str; /* Used for both REDIS_REPLY_ERROR and REDIS_REPLY_STRING */
+  std::vector<RedisRv> element;
+
+  void dump(LogOut *logout, const char *pref, int lv, int depth = 0) const;
 };
 
-typedef std::map< uint64_t, std::vector<RedisRv> > RedisRvs;
+typedef std::map<uint64_t, RedisRv> RedisRvs;
 
 
 

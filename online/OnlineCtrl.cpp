@@ -114,13 +114,8 @@ void OnlineCtrl::offline(long uid, const std::string &session)
 	log_.debug("%s-->uid:%ld session:%s rv.size:%lu", fun, uid, session.c_str(), rv.size());
 
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
-    uint64_t addr = it->first;
-    for (vector<RedisRv>::const_iterator jt = it->second.begin();
-         jt != it->second.end(); ++jt) {
-      log_.trace("%s-->addr:%lu uid:%ld session:%s type:%d,int:%ld,len:%d,str:%s",
-                 fun, addr, uid, session.c_str(), jt->type, jt->integer, jt->len, jt->str.c_str());
-    }
-
+    string addr = fun + boost::lexical_cast<string>(it->first);
+    it->second.dump(&log_, addr.c_str(), 0);
 	}
 
 	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
@@ -175,13 +170,8 @@ void OnlineCtrl::online(long uid,
 	log_.debug("%s-->uid:%ld session:%s rv.size:%lu", fun, uid, session.c_str(), rv.size());
 
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
-    uint64_t addr = it->first;
-    for (vector<RedisRv>::const_iterator jt = it->second.begin();
-         jt != it->second.end(); ++jt) {
-      log_.trace("%s-->addr:%lu uid:%ld session:%s type:%d,int:%ld,len:%d,str:%s",
-                 fun, addr, uid, session.c_str(), jt->type, jt->integer, jt->len, jt->str.c_str());
-    }
-
+    string addr = fun + boost::lexical_cast<string>(it->first);
+    it->second.dump(&log_, addr.c_str(), 0);
 	}
 
 	log_.info("%s-->over uid:%ld tm:%ld", fun, uid, tu.intv());
@@ -217,19 +207,22 @@ void OnlineCtrl::get_sessions(long uid, vector<string> &sessions)
 
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     uint64_t addr = it->first;
-    for (vector<RedisRv>::const_iterator jt = it->second.begin();
-         jt != it->second.end(); ++jt) {
-      log_.trace("%s-->addr:%lu uid:%ld type:%d,int:%ld,len:%d,str:%s",
-                 fun, addr, uid, jt->type, jt->integer, jt->len, jt->str.c_str());
+    const RedisRv &tmp = it->second;
+    string saddr = fun + boost::lexical_cast<string>(addr);
+    tmp.dump(&log_, saddr.c_str(), 0);
 
-      if (jt->type == REDIS_REPLY_STRING) {
-        sessions.push_back(jt->str);
-      }
+    if (tmp.type == REDIS_REPLY_ARRAY) {
+      for (vector<RedisRv>::const_iterator jt = tmp.element.begin();
+         jt != tmp.element.end(); ++jt) {
+
+        if (jt->type == REDIS_REPLY_STRING) {
+          sessions.push_back(jt->str);
+        }
     
+      }
+
     }
-
-	}
-
+  }
 	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
 }
 
@@ -266,32 +259,40 @@ void OnlineCtrl::get_session_info(long uid, const string &session, const vector<
 
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     uint64_t addr = it->first;
+    const RedisRv &tmp = it->second;
+    string saddr = fun + boost::lexical_cast<string>(addr);
+    tmp.dump(&log_, saddr.c_str(), 0);
 
-    bool ispair = true;
-    if (it->second.size() % 2 != 0) {
-      ispair = false;
-    }
-    
-    int kvf = 0;
-    const char *key = NULL;
-    for (vector<RedisRv>::const_iterator jt = it->second.begin();
-         jt != it->second.end(); ++jt) {
-      log_.trace("%s-->addr:%lu uid:%ld session:%s type:%d,int:%ld,len:%d,str:%s",
-                 fun, addr, uid, session.c_str(), jt->type, jt->integer, jt->len, jt->str.c_str());
-
-      if (ispair) {
-        if (kvf++ % 2 == 0) {
-          key = jt->str.c_str();
-        } else {
-          kvs[key] = jt->str;
-        }
-
-      } else {
-        log_.error("%s-->return value not pair addr:%lu uid:%ld session:%s type:%d,int:%ld,len:%d,str:%s",
-                   fun, addr, uid, session.c_str(), jt->type, jt->integer, jt->len, jt->str.c_str());
-
+    if (tmp.type == REDIS_REPLY_ARRAY) {
+      const vector<RedisRv> &tmp_eles = tmp.element;
+      bool ispair = true;
+      if (tmp_eles.size() % 2 != 0) {
+        ispair = false;
       }
+
+      int kvf = 0;
+      const char *key = NULL;
+      for (vector<RedisRv>::const_iterator jt = tmp_eles.begin();
+         jt != tmp_eles.end(); ++jt) {
+
+        if (ispair) {
+          if (kvf++ % 2 == 0) {
+            key = jt->str.c_str();
+          } else {
+            kvs[key] = jt->str;
+          }
+
+        } else {
+          log_.error("%s-->return value not pair addr:%lu uid:%ld session:%s type:%d,int:%ld,str:%s",
+                     fun, addr, uid, session.c_str(), jt->type, jt->integer, jt->str.c_str());
+
+        }
+      }
+
+
     }
+
+    
 
 	}
 

@@ -158,6 +158,9 @@ void RedisHash::hash_addr(const vector<string> &hash, std::set<uint64_t> &addrs)
     addrs.insert(addrs_v_.at(tmp % addrs_v_.size()));
   }
 
+  // !!!!!!!!!!!
+  addrs = addrs_;
+
 	log_->debug("%s-->hash:%lu addrs:%lu", fun, hash.size(), addrs.size());
 }
 
