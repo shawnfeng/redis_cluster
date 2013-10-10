@@ -238,8 +238,10 @@ void RedisEvent::connect(uint64_t addr)
 
 }
 
-void RedisEvent::cmd(RedisRvs &rv, const std::string &log_key, set<uint64_t> &addrs,
-                     int timeout, const std::vector<std::string> &args,
+void RedisEvent::cmd(RedisRvs &rv,
+                     const char *log_key,
+                     const map< uint64_t, vector<string> > &addr_cmd,
+                     int timeout,
                      const string &lua_code, bool iseval
                      )
 {
@@ -247,18 +249,13 @@ void RedisEvent::cmd(RedisRvs &rv, const std::string &log_key, set<uint64_t> &ad
   TimeUse tu;
 	const char *fun = "RedisEvent::cmd";
 	ReqCount rcount(req_count_);
-  int argc = (int)args.size();
 
-	log_->debug("%s-->size:%lu cmd:%d rcount=%d", fun, addrs.size(), argc, rcount.cn());
-	if (addrs.empty()) {
-		log_->warn("%s-->empty redis context cmd:%d", fun, argc);
+	log_->debug("%s-->k:%s size:%lu rcount=%d", fun, log_key, addr_cmd.size(), rcount.cn());
+	if (addr_cmd.empty()) {
+		log_->warn("%s-->k:%s empty redis context", fun, log_key);
 		return;
 	}
 
-  if (argc >= ARGV_MAX_LEN) {
-    log_->error("%s-->args more size:%lu", fun, args.size());
-    return;
-  }
 
 	userdata_t *u = &ud_;
 
@@ -270,23 +267,6 @@ void RedisEvent::cmd(RedisRvs &rv, const std::string &log_key, set<uint64_t> &ad
 	log_->trace("%s-->loop lock", fun);
 	mutex_.lock();
 
-  // copy the args
-  const char **argv = cmd_argv_;
-  size_t *argvlen = cmd_argvlen_;
-  for (size_t i = 0; i < args.size(); ++i) {
-    argv[i] = args[i].c_str();
-    argvlen[i] = args[i].size();
-  }
-
-  if (iseval) {
-    argv[0] = "EVAL";
-    argv[1] = lua_code.c_str();
-    if (argvlen) {
-      argvlen[0] = 4;
-      argvlen[1] = lua_code.size();
-    }
-  }
-  //----------------------
 
 	cf = u->get_cf();
 	if (cf->f() || cf->d()) {
@@ -294,21 +274,46 @@ void RedisEvent::cmd(RedisRvs &rv, const std::string &log_key, set<uint64_t> &ad
 	}
 
 	int wsz = 0;
-	for (set<uint64_t>::const_iterator it = addrs.begin();
-	     it != addrs.end(); ++it) {
+	for (map< uint64_t, vector<string> >::const_iterator it = addr_cmd.begin();
+	     it != addr_cmd.end(); ++it) {
 
-		redisAsyncContext *c = u->lookup(*it);
+    const vector<string> &args = it->second;
+    size_t argc = args.size();
+    // copy the args
+    if (argc >= ARGV_MAX_LEN) {
+      log_->error("%s-->args more size:%lu", fun, args.size());
+      continue;
+    }
+
+    const char **argv = cmd_argv_;
+    size_t *argvlen = cmd_argvlen_;
+    for (size_t i = 0; i < args.size(); ++i) {
+      argv[i] = args[i].c_str();
+      argvlen[i] = args[i].size();
+    }
+
+    if (iseval) {
+      argv[0] = "EVAL";
+      argv[1] = lua_code.c_str();
+      if (argvlen) {
+        argvlen[0] = 4;
+        argvlen[1] = lua_code.size();
+      }
+    }
+    //----------------------
+
+    const uint64_t &ad = it->first;
+		redisAsyncContext *c = u->lookup(ad);
 		if (NULL == c) {
-			connect(*it);
+			connect(ad);
 		} else {
 			redisLibevEvents *rd = (redisLibevEvents *)c->ev.data;
 			assert(rd);
-			log_->trace("%s-->c:%p e:%p st:%d", fun, *it, rd, rd->status);
+			log_->trace("%s-->c:%p e:%p st:%d", fun, ad, rd, rd->status);
 			if (1 == rd->status) {				
 				if (REDIS_ERR == redisAsyncCommandArgv(c, redis_cmd_cb, cf, argc, argv, argvlen)) {
           log_->error("%s-->redisAsyncCommandArgv %s %p", fun, c->errstr, c);
         }
-				//redisAsyncCommand(c, redis_cmd_cb, cf, "SET %s %s", "foo", "hello world");
 				wsz++;
 			} else {
 				log_->warn("%s-->connection is not ready c:%p", fun, c);
@@ -343,34 +348,41 @@ void RedisEvent::cmd(RedisRvs &rv, const std::string &log_key, set<uint64_t> &ad
 	}
 	// log out free lock
 	if (is_timeout) {
-		log_->warn("%s-->timeout format:%d", fun, argc);
+		log_->warn("%s-->k:%s timeout format", fun, log_key);
 	}
 
 
 
 
   // first load script
-  if (argc >= 2
-      && !lua_code.empty()
+  if (
+      !lua_code.empty()
       && !carg.err.empty()
-      // sorry! EVALSHA commend must be used caps
-      && args[0] == "EVALSHA"
       ) {
 
-    set<uint64_t> erraddrs;
+    map< uint64_t, vector<string> > erraddrs;
     for (map<uint64_t, RedisRv>::const_iterator it = carg.err.begin();
          it != carg.err.end();
          ++it) {
-      if (!strncmp(it->second.str.c_str(), "NOSCRIPT", 8)) {
+      
+      map< uint64_t, vector<string> >::const_iterator jt = addr_cmd.find(it->first);
+      assert(jt != addr_cmd.end());
+
+      const vector<string> &args = jt->second;
+      size_t argc = args.size();
+      if (argc >=2
+          // sorry! EVALSHA commend must be used caps
+          && args.at(0) == "EVALSHA"
+          && !strncmp(it->second.str.c_str(), "NOSCRIPT", 8)) {
 
         log_->warn("%s-->%lu first load  script:%s", fun, it->first, lua_code.c_str());
-        erraddrs.insert(it->first);
+        erraddrs[it->first] = args;
 
       }
 
     }
     
-    cmd(rv, log_key, erraddrs, timeout, args, lua_code, true);
+    cmd(rv, log_key, erraddrs, timeout, lua_code, true);
   }
 
   // error log, use the caller thread print
@@ -381,7 +393,7 @@ void RedisEvent::cmd(RedisRvs &rv, const std::string &log_key, set<uint64_t> &ad
   }
 
 	log_->info("%s-->k:%s size:%lu wsz:%d istimeout:%d rcount:%d tm:%ld",
-             fun, log_key.c_str(), addrs.size(), wsz, is_timeout, rcount.cn(), tu.intv());
+             fun, log_key, addr_cmd.size(), wsz, is_timeout, rcount.cn(), tu.intv());
 
 }
 

@@ -4,10 +4,13 @@
 using namespace std;
 
 const int INIT_SLEEP = 2;
-const int THREAD_CB_RUN_TIMES = 10;
+const int THREAD_CB_RUN_TIMES = 2;
 const int THREAD_NUMS = 1;
 
-const bool IS_GET_SESSIONS_INFO_TEST = false;
+const bool IS_GET_SESSIONS_INFO_TEST = true;
+const int GET_SESSIONS_INFO_SLEEP = 2;
+
+LogOut g_log;
 
 void *thread_cb(void* args)
 {  
@@ -37,11 +40,17 @@ void *thread_cb(void* args)
 
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     long uid = rand() % 100000;
+    uid = 68154;
     oc->online(uid, session, kvs);
 
     if (IS_GET_SESSIONS_INFO_TEST) {
+      sleep(GET_SESSIONS_INFO_SLEEP);
       map<string, string> rv;
       oc->get_session_info(uid, session, vector<string>(), rv);
+
+      for (map<string, string>::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+        g_log.info("%ld session info %s:%s", uid, it->first.c_str(), it->second.c_str());
+      }
     }
   }
 
@@ -53,7 +62,7 @@ void *thread_cb(void* args)
 
 int main (int argc, char **argv)
 {
-	LogOut g_log;
+
 	g_log.debug("%u", sizeof(int));
 	g_log.debug("%u", sizeof(long));
 	g_log.debug("%u", sizeof(long long));
