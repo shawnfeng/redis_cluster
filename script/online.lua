@@ -20,5 +20,7 @@ end
 
 --return {uid, session}
 return tonumber(uid)
+--return {err = "err test"}
+--return {ok = "OK test"}
 --return KEYS
 

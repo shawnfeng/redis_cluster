@@ -3,7 +3,8 @@
 
 #include <string>
 
-#include "../src/RedisClient.h"
+#include "../src/RedisEvent.h"
+#include "../src/RedisHash.h"
 
 class OnlineCtrl {
   struct script_t {
@@ -12,15 +13,23 @@ class OnlineCtrl {
   };
 
 	LogOut log_;
+	RedisEvent re_;
+	RedisHash rh_;
+
+
   std::string sp_;
-	RedisClient rc_;
 
   script_t s_online_;
   script_t s_offline_;
   script_t s_session_info_;
   script_t s_sessions_;
 
-
+ private:
+  void single_uid_commend(const char *fun,
+                          int timeout,
+                          const std::string &suid, std::vector<std::string> &args,
+                          const std::string &lua_code,
+                          RedisRvs &rv);
  public:
  OnlineCtrl(void (*log_t)(const char *),
             void (*log_d)(const char *),
@@ -28,13 +37,16 @@ class OnlineCtrl {
             void (*log_w)(const char *),
             void (*log_e)(const char *),
 
+            const char *zk_addr,
+            const char *zk_path,
+
             const char *script_path
             );
 
-	void online(long uid, const std::string &session, const std::vector<std::string> &kvs);
-	void offline(long uid, const std::string &session);
-	void get_sessions(long uid, std::vector<std::string> &sessions);
-	void get_session_info(long uid, const std::string &session, const std::vector<std::string> &ks,
+ void online(int timeout, long uid, const std::string &session, const std::vector<std::string> &kvs);
+	void offline(int timeout, long uid, const std::string &session);
+	void get_sessions(int timeout, long uid, std::vector<std::string> &sessions);
+	void get_session_info(int timeout, long uid, const std::string &session, const std::vector<std::string> &ks,
                         std::map<std::string, std::string> &kvs);
 
 };

@@ -49,7 +49,9 @@ class RedisHash {
 	zk_ctx_t *zk_ctx() { return &zk_ctx_; }
 	int start();
 
-	void hash_addr(const std::vector<std::string> &hash, std::set<uint64_t> &addrs);
+  uint64_t redis_addr(const std::string &key);
+
+  //	void hash_addr(const std::vector<std::string> &hash, std::set<uint64_t> &addrs);
 	LogOut *log() { return log_; }
 
 

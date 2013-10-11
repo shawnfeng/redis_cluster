@@ -293,6 +293,7 @@ void RedisEvent::cmd(RedisRvs &rv,
     const uint64_t &ad = it->first;
 		redisAsyncContext *c = u->lookup(ad);
 		if (NULL == c) {
+      log_->warn("%s-->add connection addr:%lu", fun, ad);
 			connect(ad);
 		} else {
 			redisLibevEvents *rd = (redisLibevEvents *)c->ev.data;
@@ -301,8 +302,9 @@ void RedisEvent::cmd(RedisRvs &rv,
 			if (1 == rd->status) {				
 				if (REDIS_ERR == redisAsyncCommandArgv(c, redis_cmd_cb, cf, argc, argv, argvlen)) {
           log_->error("%s-->redisAsyncCommandArgv %s %p", fun, c->errstr, c);
+        } else {
+          wsz++;
         }
-				wsz++;
 			} else {
 				log_->warn("%s-->connection is not ready c:%p", fun, c);
 			}

@@ -1,14 +1,18 @@
 #include <stdlib.h>
 
+#include <boost/lexical_cast.hpp>
+
 #include "OnlineCtrl.h"
 using namespace std;
 
 const int INIT_SLEEP = 2;
-const int THREAD_CB_RUN_TIMES = 10000;
-const int THREAD_NUMS = 30;
+const int THREAD_CB_RUN_TIMES = 2;
+const int THREAD_NUMS = 1;
 
-const bool IS_GET_SESSIONS_INFO_TEST = false;
+const bool IS_GET_SESSIONS_INFO_TEST = true;
 const int GET_SESSIONS_INFO_SLEEP = 2;
+
+const int CALL_TIMEOUT = 100;
 
 LogOut g_log;
 
@@ -38,20 +42,30 @@ void *thread_cb(void* args)
 	kvs.push_back("v33ddd");
 
 
+
+
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     long uid = rand() % 100000;
-    //uid = 68154;
-    oc->online(uid, session, kvs);
+    uid = 68154;
+    kvs.push_back(boost::lexical_cast<string>(uid));
+    kvs.push_back(boost::lexical_cast<string>(uid));
+    g_log.info("******%ld==============================", uid);
+
+    oc->online(CALL_TIMEOUT, uid, session, kvs);
 
     if (IS_GET_SESSIONS_INFO_TEST) {
+    g_log.info("******%ld--------------------", uid);
       sleep(GET_SESSIONS_INFO_SLEEP);
       map<string, string> rv;
-      oc->get_session_info(uid, session, vector<string>(), rv);
+      oc->get_session_info(CALL_TIMEOUT, uid, session, vector<string>(), rv);
 
       for (map<string, string>::const_iterator it = rv.begin(); it != rv.end(); ++it) {
         g_log.info("%ld session info %s:%s", uid, it->first.c_str(), it->second.c_str());
       }
     }
+
+    kvs.pop_back();
+    kvs.pop_back();
   }
 
 
@@ -70,6 +84,10 @@ int main (int argc, char **argv)
 
 
 	OnlineCtrl oc(LogOut::log_trace, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error,
+
+                "10.2.72.12:4180,10.2.72.12:4181,10.2.72.12:4182",
+                "/tx/online/legal_nodes",
+
                 "/data/home/guangxiang.feng/redis_cluster/script");
 
   sleep(INIT_SLEEP);

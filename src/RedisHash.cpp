@@ -138,6 +138,25 @@ void RedisHash::update_ends(const vector< pair<string, int> > &ends)
   addrs_v_.assign(addrs_.begin(), addrs_.end());
 }
 
+uint64_t RedisHash::redis_addr(const std::string &key)
+{
+	const char *fun = "RedisHash::hash";
+
+	boost::shared_lock< boost::shared_mutex > lock(smux_);
+  if (addrs_.empty() || addrs_v_.empty()) {
+    log_->error("%s-->redis addrs emtpy!", fun);
+    return 0;
+  }
+
+  uint64_t tmp = CityHash64(key.c_str(), key.size());
+  log_->trace("%s-->hash:%s city64:%lu", fun, key.c_str(), tmp);
+
+  tmp = addrs_v_.at(tmp % addrs_v_.size());
+
+  return tmp;
+}
+
+/*
 void RedisHash::hash_addr(const vector<string> &hash, std::set<uint64_t> &addrs)
 {
 	const char *fun = "RedisHash::hash_addr";
@@ -152,10 +171,8 @@ void RedisHash::hash_addr(const vector<string> &hash, std::set<uint64_t> &addrs)
 
   uint64 tmp;
   for (vector<string>::const_iterator it = hash.begin(); it != hash.end(); ++it) {
-
-    tmp = CityHash64(it->c_str(), it->size());
-    log_->trace("%s-->hash:%s city64:%lu", fun, it->c_str(), tmp);
-    addrs.insert(addrs_v_.at(tmp % addrs_v_.size()));
+    tmp = redis_addr(*it);
+    if (tmp) addrs.insert(addrs_v_.at(tmp % addrs_v_.size()));
   }
 
   // !!!!!!!!!!!
@@ -163,5 +180,5 @@ void RedisHash::hash_addr(const vector<string> &hash, std::set<uint64_t> &addrs)
 
 	log_->debug("%s-->hash:%lu addrs:%lu", fun, hash.size(), addrs.size());
 }
-
+*/
 
