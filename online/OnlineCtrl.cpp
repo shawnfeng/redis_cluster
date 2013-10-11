@@ -10,6 +10,7 @@ static const char *online_ope = "/online.lua";
 static const char *offline_ope = "/offline.lua";
 static const char *get_session_info_ope = "/get_session_info.lua";
 static const char *get_session_ope = "/get_session_ope.lua";
+static const char *get_multi_ope = "/get_multi.lua";
 
 
 static bool check_sha1(const char *path, string &data, string &sha1)
@@ -83,6 +84,15 @@ OnlineCtrl::OnlineCtrl(void (*log_t)(const char *),
 		log_.error("%s error check sha1", path.c_str());
 	}
 	log_.info("data:%s sha1:%s", s_sessions_.data.c_str(), s_sessions_.sha1.c_str());
+
+
+  path = sp_ + get_multi_ope;
+	if (!check_sha1(path.c_str(), s_multi_.data, s_multi_.sha1)) {
+		log_.error("%s error check sha1", path.c_str());
+	}
+	log_.info("data:%s sha1:%s", s_multi_.data.c_str(), s_multi_.sha1.c_str());
+
+
 
 
 }
@@ -280,3 +290,55 @@ void OnlineCtrl::get_session_info(int timeout, long uid, const string &session, 
 }
 
 
+void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids)
+{
+  TimeUse tu;
+  const char *fun = "OnlineCtrl::get_multi";
+  string sactor = boost::lexical_cast<string>(actor);
+  map< uint64_t, set<string> > disp_uids;
+
+  for (vector<long>::const_iterator it = uids.begin();
+       it != uids.end(); ++it) {
+    long uid = *it;
+    string suid = boost::lexical_cast<string>(uid);
+    uint64_t rd_addr = rh_.redis_addr(suid);
+    if (!rd_addr) {
+      log_.error("%s-->acotor:%s error hash uid:%s", fun, sactor.c_str(), suid.c_str());
+      continue;
+    }
+
+    disp_uids.insert(
+                     pair< uint64_t, set<string> >(rd_addr, set<string>())
+                       ).first->second.insert(suid);
+
+  }
+
+      map< uint64_t, vector<string> > addr_cmd;
+
+    for (map< uint64_t, set<string> >::const_iterator it = disp_uids.begin();
+         it != disp_uids.end(); ++it) {
+      vector<string> &args = addr_cmd.insert(pair< uint64_t, vector<string> >(it->first, vector<string>())).first->second;
+      args.push_back("EVALSHA");
+      args.push_back(s_multi_.sha1);
+      args.push_back(boost::lexical_cast<string>(it->second.size()));
+
+      for (set<string>::const_iterator jt = it->second.begin();
+           jt != it->second.end(); jt++) {
+        args.push_back(*jt);
+      }
+
+
+    }
+
+    RedisRvs rv;
+    re_.cmd(rv, sactor.c_str(), addr_cmd, timeout, s_multi_.data, false);
+
+    for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+      uint64_t addr = it->first;
+      const RedisRv &tmp = it->second;
+      string saddr = fun + boost::lexical_cast<string>(addr);
+      tmp.dump(&log_, saddr.c_str(), 0);      
+    }
+
+    log_.info("%s-->actor:%ld tm:%ld", fun, actor, tu.intv());
+}

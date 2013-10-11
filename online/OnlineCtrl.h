@@ -23,6 +23,7 @@ class OnlineCtrl {
   script_t s_offline_;
   script_t s_session_info_;
   script_t s_sessions_;
+  script_t s_multi_;
 
  private:
   void single_uid_commend(const char *fun,
@@ -48,6 +49,8 @@ class OnlineCtrl {
 	void get_sessions(int timeout, long uid, std::vector<std::string> &sessions);
 	void get_session_info(int timeout, long uid, const std::string &session, const std::vector<std::string> &ks,
                         std::map<std::string, std::string> &kvs);
+
+	void get_multi(int timeout, long actor, const std::vector<long> &uids);
 
 };
 

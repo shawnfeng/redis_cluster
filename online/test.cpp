@@ -16,10 +16,24 @@ const int CALL_TIMEOUT = 100;
 
 LogOut g_log;
 
+static void test_get_multi(OnlineCtrl *oc)
+{
+  for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
+    long actor = 1;
+    vector<long> uids;
+    uids.push_back(1000);
+    uids.push_back(1001);
+    uids.push_back(1002);
+    oc->get_multi(CALL_TIMEOUT, actor, uids);
+  }
+}
+
 void *thread_cb(void* args)
 {  
 	OnlineCtrl *oc = (OnlineCtrl *)args;
 
+  test_get_multi(oc);
+  return NULL;
 
 	string session = "fuck2";
 	vector<string> kvs;
