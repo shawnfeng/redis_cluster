@@ -172,6 +172,14 @@ void OnlineCtrl::online(long uid,
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     string addr = fun + boost::lexical_cast<string>(it->first);
     it->second.dump(&log_, addr.c_str(), 0);
+    /*
+    // return test
+    if (it->second.integer == uid) {
+      log_.info("OOOOOOOOOOOOOOOOOOOO%ld OK", uid);
+    } else {
+      log_.error("EEEEEEEEEEEEEEEEEEEE%ld ERROR", uid);
+    }
+    */
 	}
 
 	log_.info("%s-->over uid:%ld tm:%ld", fun, uid, tu.intv());

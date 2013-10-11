@@ -19,6 +19,6 @@ end
 --end
 
 --return {uid, session}
-return 1
+return tonumber(uid)
 --return KEYS
 

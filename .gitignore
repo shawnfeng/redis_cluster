@@ -1,0 +1,4 @@
+*.o
+*.d
+online/test_online
+src/libredis_client.a

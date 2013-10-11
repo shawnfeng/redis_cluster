@@ -4,10 +4,10 @@
 using namespace std;
 
 const int INIT_SLEEP = 2;
-const int THREAD_CB_RUN_TIMES = 2;
-const int THREAD_NUMS = 1;
+const int THREAD_CB_RUN_TIMES = 10000;
+const int THREAD_NUMS = 30;
 
-const bool IS_GET_SESSIONS_INFO_TEST = true;
+const bool IS_GET_SESSIONS_INFO_TEST = false;
 const int GET_SESSIONS_INFO_SLEEP = 2;
 
 LogOut g_log;
@@ -40,7 +40,7 @@ void *thread_cb(void* args)
 
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     long uid = rand() % 100000;
-    uid = 68154;
+    //uid = 68154;
     oc->online(uid, session, kvs);
 
     if (IS_GET_SESSIONS_INFO_TEST) {
@@ -70,7 +70,7 @@ int main (int argc, char **argv)
 
 
 	OnlineCtrl oc(LogOut::log_trace, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error,
-                "/data/home/guangxiang.feng/code_tst/redis_client/script");
+                "/data/home/guangxiang.feng/redis_cluster/script");
 
   sleep(INIT_SLEEP);
 
