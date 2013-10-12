@@ -31,7 +31,7 @@ public:
 
 class userdata_t {
 
-	enum { CUR_CALL_NUM = 100000, };
+	enum { CUR_CALL_NUM = 200000, };
 	size_t idx_;
 	cflag_t cfg_[CUR_CALL_NUM];
 	std::map<uint64_t, redisAsyncContext *> ctxs_;

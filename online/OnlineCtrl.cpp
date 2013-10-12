@@ -289,8 +289,61 @@ void OnlineCtrl::get_session_info(int timeout, long uid, const string &session, 
 	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
 }
 
+void OnlineCtrl::one_uid_session(long actor, const RedisRv &tmp, std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions)
+{
+    const char *fun = "OnlineCtrl::one_uid_session";
 
-void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids)
+      if (tmp.type != REDIS_REPLY_ARRAY
+          || tmp.element.size() != 3
+          || tmp.element.at(0).type != REDIS_REPLY_INTEGER
+          || tmp.element.at(1).type != REDIS_REPLY_STRING
+          || tmp.element.at(2).type != REDIS_REPLY_ARRAY
+          ) {
+        log_.error("%s-->retrun sessions invalid format actor:%ld", fun, actor);
+        return;
+      }
+
+      map< string, map<string, string> > &msessions =
+        uids_sessions.insert(
+                             pair< long, map< string, map<string, string> > >
+                             (tmp.element.at(0).integer, map< string, map<string, string> >() )
+                               ).first->second;
+      map<string, string> &sessions = msessions.insert(
+                                                       pair< string, map<string, string> >
+                                                         (tmp.element.at(1).str, map<string, string>() )
+                                                          ).first->second;
+
+      const vector<RedisRv> &tmp_eles = tmp.element.at(2).element;
+
+      bool ispair = true;
+      if (tmp_eles.size() % 2 != 0) {
+        ispair = false;
+      }
+
+      int kvf = 0;
+      const char *key = NULL;
+      for (vector<RedisRv>::const_iterator jt = tmp_eles.begin();
+           jt != tmp_eles.end(); ++jt) {
+
+        if (ispair) {
+          if (kvf++ % 2 == 0) {
+            key = jt->str.c_str();
+          } else {
+            sessions[key] = jt->str;
+          }
+        } else {
+          log_.error("%s-->retrun sessions not pair actor:%ld", fun, actor);
+
+        }
+
+      }
+
+
+}
+
+void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
+                           std::map< long, map< std::string, std::map<std::string, std::string> > > &uids_sessions
+                           )
 {
   TimeUse tu;
   const char *fun = "OnlineCtrl::get_multi";
@@ -309,36 +362,51 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids)
 
     disp_uids.insert(
                      pair< uint64_t, set<string> >(rd_addr, set<string>())
-                       ).first->second.insert(suid);
+                     ).first->second.insert(suid);
 
   }
 
-      map< uint64_t, vector<string> > addr_cmd;
+  log_.info("%s-->addr.size:%lu uids.size:%lu", fun, disp_uids.size(), uids.size());
+  map< uint64_t, vector<string> > addr_cmd;
 
-    for (map< uint64_t, set<string> >::const_iterator it = disp_uids.begin();
-         it != disp_uids.end(); ++it) {
-      vector<string> &args = addr_cmd.insert(pair< uint64_t, vector<string> >(it->first, vector<string>())).first->second;
-      args.push_back("EVALSHA");
-      args.push_back(s_multi_.sha1);
-      args.push_back(boost::lexical_cast<string>(it->second.size()));
+  for (map< uint64_t, set<string> >::const_iterator it = disp_uids.begin();
+       it != disp_uids.end(); ++it) {
+    vector<string> &args = addr_cmd.insert(pair< uint64_t, vector<string> >(it->first, vector<string>())).first->second;
+    args.push_back("EVALSHA");
+    args.push_back(s_multi_.sha1);
+    args.push_back(boost::lexical_cast<string>(it->second.size()));
 
-      for (set<string>::const_iterator jt = it->second.begin();
-           jt != it->second.end(); jt++) {
-        args.push_back(*jt);
-      }
-
-
+    for (set<string>::const_iterator jt = it->second.begin();
+         jt != it->second.end(); jt++) {
+      args.push_back(*jt);
     }
 
-    RedisRvs rv;
-    re_.cmd(rv, sactor.c_str(), addr_cmd, timeout, s_multi_.data, false);
+    log_.info("%s-->addr:%lu uids.size:%lu", fun, it->first, args.size()-3);
+  }
 
-    for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
-      uint64_t addr = it->first;
-      const RedisRv &tmp = it->second;
-      string saddr = fun + boost::lexical_cast<string>(addr);
-      tmp.dump(&log_, saddr.c_str(), 0);      
+  RedisRvs rv;
+  re_.cmd(rv, sactor.c_str(), addr_cmd, timeout, s_multi_.data, false);
+  // ================================
+  for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+    uint64_t addr = it->first;
+    const RedisRv &tmp = it->second;
+    string saddr = fun + boost::lexical_cast<string>(addr);
+    tmp.dump(&log_, saddr.c_str(), 0);
+
+    if (tmp.type != REDIS_REPLY_ARRAY) {
+      log_.error("%s-->retrun sessions invalid format actor:%ld addr:%lu", fun, actor, addr);
+      continue;
     }
 
-    log_.info("%s-->actor:%ld tm:%ld", fun, actor, tu.intv());
+
+
+    const vector<RedisRv> &tmp_eles = tmp.element;
+    for (vector<RedisRv>::const_iterator jt = tmp_eles.begin();
+         jt != tmp_eles.end(); ++jt) {
+      one_uid_session(actor, *jt, uids_sessions);      
+    }
+
+
+  }
+  log_.info("%s-->actor:%ld tm:%ld", fun, actor, tu.intv());
 }

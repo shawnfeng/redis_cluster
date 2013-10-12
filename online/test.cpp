@@ -18,13 +18,32 @@ LogOut g_log;
 
 static void test_get_multi(OnlineCtrl *oc)
 {
+  vector<long> uids;
+  for (int i = 0; i < 1; ++i) {
+    uids.push_back(i);
+  }
+
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     long actor = 1;
-    vector<long> uids;
-    uids.push_back(1000);
-    uids.push_back(1001);
-    uids.push_back(1002);
-    oc->get_multi(CALL_TIMEOUT, actor, uids);
+    map< long, map< string, map<string, string> > > uids_sessions;
+    oc->get_multi(CALL_TIMEOUT, actor, uids, uids_sessions);
+    g_log.info("----------test_get_multi 1 size %lu", uids_sessions.size());
+    for (map< long, map< string, map<string, string> > >::const_iterator it = uids_sessions.begin();
+         it != uids_sessions.end(); ++it) {
+      g_log.info("----------test_get_multi 2 size %lu %ld", it->second.size(), it->first);
+      for (map< string, map<string, string> >::const_iterator jt = it->second.begin();
+           jt != it->second.end(); ++jt) {
+
+        g_log.info("----------test_get_multi 3 size %lu %s", jt->second.size(), jt->first.c_str());
+        for (map<string, string>::const_iterator kt = jt->second.begin();
+             kt != jt->second.end(); ++kt) {
+          g_log.info("test_get_multi %ld %s %s:%s", it->first, jt->first.c_str(), kt->first.c_str(), kt->second.c_str());
+        }
+
+      }
+
+    }
+    sleep(1);
   }
 }
 
@@ -97,7 +116,7 @@ int main (int argc, char **argv)
 	g_log.debug("%u", sizeof(long long int));
 
 
-	OnlineCtrl oc(LogOut::log_trace, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error,
+	OnlineCtrl oc(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error,
 
                 "10.2.72.12:4180,10.2.72.12:4181,10.2.72.12:4182",
                 "/tx/online/legal_nodes",

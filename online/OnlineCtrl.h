@@ -31,6 +31,8 @@ class OnlineCtrl {
                           const std::string &suid, std::vector<std::string> &args,
                           const std::string &lua_code,
                           RedisRvs &rv);
+
+  void one_uid_session(long actor, const RedisRv &rv, std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions);
  public:
  OnlineCtrl(void (*log_t)(const char *),
             void (*log_d)(const char *),
@@ -50,7 +52,9 @@ class OnlineCtrl {
 	void get_session_info(int timeout, long uid, const std::string &session, const std::vector<std::string> &ks,
                         std::map<std::string, std::string> &kvs);
 
-	void get_multi(int timeout, long actor, const std::vector<long> &uids);
+	void get_multi(int timeout, long actor, const std::vector<long> &uids,
+                 std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions
+                 );
 
 };
 
