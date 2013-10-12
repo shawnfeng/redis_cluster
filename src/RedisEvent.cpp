@@ -312,8 +312,10 @@ void RedisEvent::cmd(RedisRvs &rv,
 		}
 
 	}
-	cf->set_f(wsz);
-	cf->set_d((void *)&carg);
+  if (wsz > 0) {
+    cf->set_f(wsz);
+    cf->set_d((void *)&carg);
+  }
 
 
 	ev_async_send (loop_, &async_w_);
@@ -326,8 +328,13 @@ void RedisEvent::cmd(RedisRvs &rv,
 	mutex_.unlock(); // card.mux had beed locked, then release mutex_
 	log_->trace("%s-->loop unlock", fun);
 	// ==========unlock==========
-	        log_->trace("%s-->condition wait %d", fun, timeout);
-		is_timeout = !carg.cond.timed_wait(lock, boost::posix_time::milliseconds(timeout));
+	  log_->trace("%s-->condition wait %d", fun, timeout);
+    if (wsz > 0) {
+      is_timeout = !carg.cond.timed_wait(lock, boost::posix_time::milliseconds(timeout));
+    } else {
+      log_->warn("%s-->valid redis connection 0", fun);
+      is_timeout = false;
+    }
 	}
 
 	log_->trace("%s-->condition pass istimeout=%d", fun, is_timeout);
