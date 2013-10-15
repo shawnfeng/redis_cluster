@@ -86,7 +86,7 @@ void RedisCtrl::get_nodes(const char *path, set<string> &addrs)
 
 }
 
-int RedisCtrl::get_cluster_node(const char *path, map< int, set<string> > &cfgs)
+int RedisCtrl::get_cluster_node(const char *path, map< string, set<string> > &cfgs)
 {
   const char *fun = "RedisCtrl::get_cluster_node";
 
@@ -114,7 +114,7 @@ int RedisCtrl::get_cluster_node(const char *path, map< int, set<string> > &cfgs)
     int idx = cut_idx(CLUSTER_PREFIX, *it);
     if (-1 == idx) continue;
 
-    set<string> &nodes = cfgs.insert(pair< int , set<string> >(idx, set<string>())).first->second;
+    set<string> &nodes = cfgs.insert(pair< string , set<string> >(*it, set<string>())).first->second;
     string tmp = path;
     tmp += "/";
     tmp += *it;
@@ -124,14 +124,14 @@ int RedisCtrl::get_cluster_node(const char *path, map< int, set<string> > &cfgs)
   return 0;
 }
 
-int RedisCtrl::get_config(const char *path, std::map< int, std::set<std::string> > &cfgs)
+int RedisCtrl::get_config(const char *path, std::map< string, std::set<std::string> > &cfgs)
 {
   return get_cluster_node(path, cfgs);
 
 }
 
 
-int RedisCtrl::get_error(const char *path, std::map< int, std::set<std::string> > &errs)
+int RedisCtrl::get_error(const char *path, std::map< string, std::set<std::string> > &errs)
 {
   return get_cluster_node(path, errs);
 }
@@ -200,22 +200,22 @@ int RedisCtrl::get_data(const char *path, string &data)
   return 0;
 }
 
-int RedisCtrl::get_check(const char *path, map< int, map<string, int> > &chks)
+int RedisCtrl::get_check(const char *path, map< string, map<string, int> > &chks)
 {
-  map< int, set<string> > cls;
+  map< string, set<string> > cls;
   if (get_cluster_node(path, cls)) return 1;
   
 
   char buf[1024];
-  for (map< int, set<string> >::const_iterator it = cls.begin();
+  for (map< string, set<string> >::const_iterator it = cls.begin();
        it != cls.end(); ++it) {
     map<string, int> &rdis
-      = chks.insert(pair< int, map<string, int> >(it->first, map<string, int>())).first->second;
+      = chks.insert(pair< string, map<string, int> >(it->first, map<string, int>())).first->second;
 
     for (set<string>::const_iterator jt = it->second.begin();
          jt != it->second.end(); ++jt) {
-      snprintf(buf, sizeof(buf), "%s/%s%d/%s",
-               path, CLUSTER_PREFIX, it->first, jt->c_str());
+      snprintf(buf, sizeof(buf), "%s/%s/%s",
+               path, it->first.c_str(), jt->c_str());
 
       string data;
       if (get_data(buf, data)) {
@@ -252,7 +252,7 @@ void RedisCtrl::check()
   string check_p = zk_root_path_ + CHECK_PATH;
   //-----------------------------------
 
-  map< int, set<string> > cfgs;
+  map< string, set<string> > cfgs;
 
   int rv = get_config(cfg_p.c_str(), cfgs);
   if (rv != 0) {
@@ -264,15 +264,15 @@ void RedisCtrl::check()
   log_->debug("%s-->rv:%d cluster.size:%lu",
               fun, rv, cfgs.size());
 
-  for (map< int, set<string> >::const_iterator it = cfgs.begin();
+  for (map< string, set<string> >::const_iterator it = cfgs.begin();
        it != cfgs.end(); ++it) {
     for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-      log_->trace("%s-->configinfo cluster%d node:%s", fun, it->first, jt->c_str());
+      log_->trace("%s-->configinfo %s node:%s", fun, it->first.c_str(), jt->c_str());
     }
 
   }
   // -----------------------------------------
-  map< int, set<string> > errs;
+  map< string, set<string> > errs;
   rv = get_error(err_p.c_str(), errs);
   if (rv != 0) {
     log_->error("%s-->get errs error rv:%d", fun, rv);
@@ -281,17 +281,17 @@ void RedisCtrl::check()
   log_->debug("%s-->rv:%d errs.size:%lu",
               fun, rv, errs.size());
 
-  for (map< int, set<string> >::const_iterator it = errs.begin();
+  for (map< string, set<string> >::const_iterator it = errs.begin();
        it != errs.end(); ++it) {
     for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-      log_->trace("%s-->errors cluster%d node:%s", fun, it->first, jt->c_str());
+      log_->trace("%s-->errors %s node:%s", fun, it->first.c_str(), jt->c_str());
     }
 
   }
 
 
   // -----------------------------------------
-  map< int, map<string, int> > chks;
+  map< string, map<string, int> > chks;
   rv = get_check(check_p.c_str(), chks);
   if (rv != 0) {
     log_->error("%s-->get checks error rv:%d", fun, rv);
@@ -300,9 +300,9 @@ void RedisCtrl::check()
   log_->debug("%s-->rv:%d chks.size:%lu",
               fun, rv, chks.size());
 
-  for (map< int, map<string, int> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
+  for (map< string, map<string, int> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
   for (map<string, int>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-    log_->trace("%s-->checks cluster%d node:%s r%d", fun, it->first, jt->first.c_str(), jt->second);
+    log_->trace("%s-->checks %s node:%s r%d", fun, it->first.c_str(), jt->first.c_str(), jt->second);
     }
 
   }
@@ -317,11 +317,11 @@ void RedisCtrl::check()
 
 }
 
-int RedisCtrl::logic_check_add(const std::map< int, std::set<std::string> > &cfgs,
-                               const std::map< int, std::set<std::string> > &errs,
-                               const std::map< int, std::map<std::string, int> > &chks)
+int RedisCtrl::logic_check_add(const std::map< std::string, std::set<std::string> > &cfgs,
+                               const std::map< std::string, std::set<std::string> > &errs,
+                               const std::map< std::string, std::map<std::string, int> > &chks)
 {
-  for (map< int, set<string> >::const_iterator it = cfgs.begin();
+  for (map< string, set<string> >::const_iterator it = cfgs.begin();
        it != cfgs.end(); ++it) {
     for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
 
