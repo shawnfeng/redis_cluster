@@ -284,6 +284,7 @@ int RedisCtrl::get_data(const char *path, string &data)
 
 int RedisCtrl::get_check(const char *path, map< string, map<string, string> > &chks)
 {
+  const char *fun = "RedisCtrl::get_check";
   map< string, set<string> > cls;
   if (get_cluster_node(path, false, cls)) return 1;
   
@@ -303,11 +304,31 @@ int RedisCtrl::get_check(const char *path, map< string, map<string, string> > &c
       if (get_data(buf, data)) {
         return 2;
       }
-      /*
+
       long idx = cut_idx(REDIS_PREFIX, *jt);
-      if (idx == -1) continue;
-      */
-      rdis[data] = *jt;
+      if (idx == -1) {
+        if (delete_node(buf)) return 3;      
+        continue;
+      }
+
+      map<string, string>::const_iterator kt = rdis.find(data);
+      if (kt != rdis.end()) {
+        log_->error("%s-->multi addr %s %s", fun, data.c_str(), jt->c_str());
+        
+        long idx0 = cut_idx(REDIS_PREFIX, kt->second);
+        long idx1 = cut_idx(REDIS_PREFIX, *jt);
+
+        if (idx1 < idx0) {
+          rdis[data] = *jt;
+          snprintf(buf, sizeof(buf), "%s/%s/%s",
+                   path, it->first.c_str(), kt->second.c_str());
+        }
+
+        if (delete_node(buf)) return 4;
+        
+      } else {
+        rdis[data] = *jt;
+      }
     }
 
   }
