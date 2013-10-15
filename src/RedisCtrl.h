@@ -24,6 +24,7 @@ class RedisCtrl {
   std::string zk_cfg_path_;
   std::string zk_err_path_;
   std::string zk_check_path_;
+  std::string zk_node_path_;
 
   // ---------
   bool isvalid_addr(const char *addr);
@@ -53,6 +54,7 @@ class RedisCtrl {
   int logic_check_rm(const std::map< std::string, std::set<std::string> > &cfgs,
                      const std::map< std::string, std::map<std::string, std::string> > &chks);
 
+  int init_path_check();
 
  public:
 
@@ -64,7 +66,8 @@ class RedisCtrl {
     zk_lock_path_(zk_root_path_ + "/lock"),
     zk_cfg_path_(zk_root_path_ + "/config"),
     zk_err_path_(zk_root_path_ + "/error"),
-    zk_check_path_(zk_root_path_ + "/check")
+    zk_check_path_(zk_root_path_ + "/check"),
+    zk_node_path_(zk_root_path_ + "/legal_nodes")
 
 		{
 

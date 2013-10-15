@@ -315,6 +315,28 @@ int RedisCtrl::get_check(const char *path, map< string, map<string, string> > &c
   return 0;
 }
 
+int RedisCtrl::init_path_check()
+{
+  string true_path;
+
+  if (check_add_create(zk_lock_path_.c_str(), 0, "", true_path))
+    return 1;
+
+  if (check_add_create(zk_cfg_path_.c_str(), 0, "", true_path))
+    return 2;
+
+  if (check_add_create(zk_err_path_.c_str(), 0, "", true_path))
+    return 3;
+
+  if (check_add_create(zk_check_path_.c_str(), 0, "", true_path))
+    return 4;
+
+  if (check_add_create(zk_node_path_.c_str(), 0, "", true_path))
+    return 5;
+
+
+  return 0;
+}
 
 void RedisCtrl::check()
 {
@@ -325,6 +347,12 @@ void RedisCtrl::check()
     return;
   }
 
+  int rv = init_path_check();
+  if (rv) {
+    log_->error("%s-->init check path error rv:%d", fun, rv);
+    return;
+  }
+
   // !!! 先check 给的路径是否存在，不存在创建之
   // 获取锁
 
@@ -332,7 +360,7 @@ void RedisCtrl::check()
 
   map< string, set<string> > cfgs;
 
-  int rv = get_config(zk_cfg_path_.c_str(), cfgs);
+  rv = get_config(zk_cfg_path_.c_str(), cfgs);
   if (rv != 0) {
     log_->error("%s-->get cfg error rv:%d", fun, rv);
     return;
