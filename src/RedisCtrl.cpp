@@ -81,7 +81,7 @@ void RedisCtrl::get_nodes(const char *path, set<string> &addrs)
 
 }
 
-int RedisCtrl::get_cluster_node(const char *path, map< string, set<string> > &cfgs)
+int RedisCtrl::get_cluster_node(const char *path, bool ischeck, map< string, set<string> > &cfgs)
 {
   const char *fun = "RedisCtrl::get_cluster_node";
 
@@ -106,8 +106,10 @@ int RedisCtrl::get_cluster_node(const char *path, map< string, set<string> > &cf
   // ----------
   for (set<string>::const_iterator it = clusters.begin();
        it != clusters.end(); ++it) {
-    long idx = cut_idx(CLUSTER_PREFIX, *it);
-    if (-1 == idx) continue;
+    if (ischeck) {
+      long idx = cut_idx(CLUSTER_PREFIX, *it);
+      if (-1 == idx) continue;
+    }
 
     set<string> &nodes = cfgs.insert(pair< string , set<string> >(*it, set<string>())).first->second;
     string tmp = path;
@@ -121,14 +123,14 @@ int RedisCtrl::get_cluster_node(const char *path, map< string, set<string> > &cf
 
 int RedisCtrl::get_config(const char *path, std::map< string, std::set<std::string> > &cfgs)
 {
-  return get_cluster_node(path, cfgs);
+  return get_cluster_node(path, true, cfgs);
 
 }
 
 
 int RedisCtrl::get_error(const char *path, std::map< string, std::set<std::string> > &errs)
 {
-  return get_cluster_node(path, errs);
+  return get_cluster_node(path, false, errs);
 }
 
 int RedisCtrl::create_node(const char *path, int flags, const string &value, string &true_path)
@@ -159,6 +161,29 @@ int RedisCtrl::create_node(const char *path, int flags, const string &value, str
              fun, path, true_path.c_str(), flags, value.c_str()
              );
   return 0;
+
+}
+
+int RedisCtrl::delete_node(const char *path)
+{
+  const char *fun = "RedisCtrl::delete_node";
+
+  int rv = zoo_delete(zkh_, path, -1);
+
+  if (rv == ZOK) {
+    log_->info("%s delete_node path:%s",
+                fun, path
+                );
+
+    return 0;
+  } else {
+    log_->error("%s delete_node err path:%s rv:%d",
+                fun, path, rv
+                );
+
+    return 1;
+  }
+
 
 }
 
@@ -233,17 +258,17 @@ int RedisCtrl::get_data(const char *path, string &data)
   return 0;
 }
 
-int RedisCtrl::get_check(const char *path, map< string, map<string, long> > &chks)
+int RedisCtrl::get_check(const char *path, map< string, map<string, string> > &chks)
 {
   map< string, set<string> > cls;
-  if (get_cluster_node(path, cls)) return 1;
+  if (get_cluster_node(path, false, cls)) return 1;
   
 
   char buf[1024];
   for (map< string, set<string> >::const_iterator it = cls.begin();
        it != cls.end(); ++it) {
-    map<string, long> &rdis
-      = chks.insert(pair< string, map<string, long> >(it->first, map<string, long>())).first->second;
+    map<string, string> &rdis
+      = chks.insert(pair< string, map<string, string> >(it->first, map<string, string>())).first->second;
 
     for (set<string>::const_iterator jt = it->second.begin();
          jt != it->second.end(); ++jt) {
@@ -254,11 +279,11 @@ int RedisCtrl::get_check(const char *path, map< string, map<string, long> > &chk
       if (get_data(buf, data)) {
         return 2;
       }
-
+      /*
       long idx = cut_idx(REDIS_PREFIX, *jt);
       if (idx == -1) continue;
-
-      rdis[data] = idx;
+      */
+      rdis[data] = *jt;
     }
 
   }
@@ -320,7 +345,7 @@ void RedisCtrl::check()
 
 
   // -----------------------------------------
-  map< string, map<string, long> > chks;
+  map< string, map<string, string> > chks;
   rv = get_check(zk_check_path_.c_str(), chks);
   if (rv != 0) {
     log_->error("%s-->get checks error rv:%d", fun, rv);
@@ -329,9 +354,9 @@ void RedisCtrl::check()
   log_->debug("%s-->rv:%d chks.size:%lu",
               fun, rv, chks.size());
 
-  for (map< string, map<string, long> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
-  for (map<string, long>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-    log_->trace("%s-->checks %s node:%s r%d", fun, it->first.c_str(), jt->first.c_str(), jt->second);
+  for (map< string, map<string, string> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
+  for (map<string, string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
+    log_->trace("%s-->checks %s node:%s %s", fun, it->first.c_str(), jt->first.c_str(), jt->second.c_str());
     }
 
   }
@@ -345,6 +370,19 @@ void RedisCtrl::check()
    return;
  }
 
+ // error remove check
+ rv = logic_error_rm(cfgs, errs);
+ if (rv != 0) {
+   log_->error("%s-->get logic_error_rm error rv:%d", fun, rv);
+   return;
+ }
+
+ // check remove
+ rv = logic_check_rm(cfgs, chks);
+ if (rv != 0) {
+   log_->error("%s-->get logic_check_rm error rv:%d", fun, rv);
+   return;
+ }
 
 
 }
@@ -366,9 +404,79 @@ int RedisCtrl::check_add_create(const char *path, int flags, const std::string &
 
 }
 
+int RedisCtrl::logic_error_rm(const std::map< std::string, std::set<std::string> > &cfgs,
+                              const std::map< std::string, std::set<std::string> > &errs)
+{
+  for (map< string, set<string> >::const_iterator it = errs.begin();
+       it != errs.end(); ++it) {
+
+    string path = zk_err_path_ + "/";
+    path += it->first;
+    
+
+    map< string, set<string> >::const_iterator tmp_cfg = cfgs.find(it->first);
+
+    for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
+      if (tmp_cfg == cfgs.end()) {
+        if (delete_node((path + "/" + *jt).c_str())) return 2;
+
+      } else if (tmp_cfg->second.find(*jt) == tmp_cfg->second.end()) {
+        if (delete_node((path + "/" + *jt).c_str())) return 2;
+
+      }
+    }
+
+    if (tmp_cfg == cfgs.end()) {
+      if (delete_node(path.c_str())) return 1;
+
+    }
+
+
+  }
+
+  return 0;
+}
+
+int RedisCtrl::logic_check_rm(const std::map< std::string, std::set<std::string> > &cfgs,
+                              const std::map< std::string, std::map<std::string, string> > &chks)
+{
+  for (map< string, map<string, string> >::const_iterator it = chks.begin();
+       it != chks.end(); ++it) {
+
+    string path = zk_check_path_ + "/";
+    path += it->first;
+    
+
+    map< string, set<string> >::const_iterator tmp_cfg = cfgs.find(it->first);
+
+    for (map<string, string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
+      char buf[1024];
+      snprintf(buf, sizeof(buf), "%s/%s", path.c_str(), jt->second.c_str());
+
+      if (tmp_cfg == cfgs.end()) {
+        if (delete_node(buf)) return 2;
+
+      } else if (tmp_cfg->second.find(jt->first) == tmp_cfg->second.end()) {
+        if (delete_node(buf)) return 2;
+
+      }
+    }
+
+    if (tmp_cfg == cfgs.end()) {
+      if (delete_node(path.c_str())) return 1;
+
+    }
+
+
+  }
+
+  return 0;
+}
+
+
 int RedisCtrl::logic_check_add(const std::map< std::string, std::set<std::string> > &cfgs,
                                const std::map< std::string, std::set<std::string> > &errs,
-                               const std::map< std::string, std::map<std::string, long> > &chks)
+                               const std::map< std::string, std::map<std::string, string> > &chks)
 {
   for (map< string, set<string> >::const_iterator it = cfgs.begin();
        it != cfgs.end(); ++it) {
@@ -381,7 +489,7 @@ int RedisCtrl::logic_check_add(const std::map< std::string, std::set<std::string
     
     
 
-    map< string, map<string, long> >::const_iterator tmp = chks.find(it->first);
+    map< string, map<string, string> >::const_iterator tmp = chks.find(it->first);
     map< string, set<string> >::const_iterator tmp_err = errs.find(it->first);
 
     if (tmp == chks.end()) {

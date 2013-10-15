@@ -14,7 +14,7 @@ int main (int argc, char **argv)
 
   for (;;) {
     rc.check();
-    sleep(5);
+    sleep(20);
   }
 
 	return 0;

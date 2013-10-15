@@ -31,18 +31,26 @@ class RedisCtrl {
 
   int get_data(const char *path, std::string &data);
   int create_node(const char *path, int flags, const std::string &value, std::string &true_path);
-  int get_cluster_node(const char *path, std::map< std::string, std::set<std::string> > &cfgs);
+  int delete_node(const char *path);
+  int get_cluster_node(const char *path, bool ischeck, std::map< std::string, std::set<std::string> > &cfgs);
   int node_exist(const char *path);
   int check_add_create(const char *path, int flags, const std::string &value, std::string &true_path);
 
   int get_config(const char *path, std::map< std::string, std::set<std::string> > &cfgs);
   int get_error(const char *path, std::map< std::string, std::set<std::string> > &errs);
-  int get_check(const char *path, std::map< std::string, std::map<std::string, long> > &chks);
+  int get_check(const char *path, std::map< std::string, std::map<std::string, std::string> > &chks);
 
   // check add logic
   int logic_check_add(const std::map< std::string, std::set<std::string> > &cfgs,
                       const std::map< std::string, std::set<std::string> > &errs,
-                      const std::map< std::string, std::map<std::string, long> > &chks);
+                      const std::map< std::string, std::map<std::string, std::string> > &chks);
+
+  int logic_error_rm(const std::map< std::string, std::set<std::string> > &cfgs,
+                     const std::map< std::string, std::set<std::string> > &errs);
+
+  int logic_check_rm(const std::map< std::string, std::set<std::string> > &cfgs,
+                     const std::map< std::string, std::map<std::string, std::string> > &chks);
+
 
  public:
 
