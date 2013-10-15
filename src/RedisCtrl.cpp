@@ -3,11 +3,6 @@
 
 using namespace std;
 
-const char *LOCK_PATH = "/lock";
-const char *CONFIG_PATH = "/config";
-const char *ERROR_PATH = "/error";
-const char *CHECK_PATH = "/check";
-
 const char *CLUSTER_PREFIX = "cluster";
 const char *REDIS_PREFIX = "r";
 
@@ -43,7 +38,7 @@ int RedisCtrl::start()
 	return 0;
 }
 
-int RedisCtrl::cut_idx(const char *pref, const std::string &cluster)
+long RedisCtrl::cut_idx(const char *pref, const std::string &cluster)
 {
 	size_t pos = cluster.find(pref);
 	if (pos == std::string::npos) {
@@ -51,13 +46,13 @@ int RedisCtrl::cut_idx(const char *pref, const std::string &cluster)
     return -1;
 	}
 
-	int idx = -1;
+	long idx = -1;
   string sidx = cluster.substr(pos+strlen(pref));
   try {
     
-    idx = boost::lexical_cast<int>(sidx);
+    idx = boost::lexical_cast<long>(sidx);
   } catch(std::exception& e) {
-    log_->error("cast idx error %s %s", cluster.c_str(), sidx.c_str());
+    log_->error("cast idx error %s %s err:%s", cluster.c_str(), sidx.c_str(), e.what());
   }
 
   return idx;
@@ -111,7 +106,7 @@ int RedisCtrl::get_cluster_node(const char *path, map< string, set<string> > &cf
   // ----------
   for (set<string>::const_iterator it = clusters.begin();
        it != clusters.end(); ++it) {
-    int idx = cut_idx(CLUSTER_PREFIX, *it);
+    long idx = cut_idx(CLUSTER_PREFIX, *it);
     if (-1 == idx) continue;
 
     set<string> &nodes = cfgs.insert(pair< string , set<string> >(*it, set<string>())).first->second;
@@ -138,6 +133,7 @@ int RedisCtrl::get_error(const char *path, std::map< string, std::set<std::strin
 
 int RedisCtrl::create_node(const char *path, int flags, const string &value, string &true_path)
 {
+  const char *fun = "RedisCtrl::create_node";
   const char *v = NULL;
   int vl = -1;
   if (!value.empty()) {
@@ -151,10 +147,47 @@ int RedisCtrl::create_node(const char *path, int flags, const string &value, str
                       &ZOO_OPEN_ACL_UNSAFE, flags,
                       buf, sizeof(buf));
 
-  if (rv != ZOK) return 1;
+  if (rv != ZOK) {
+    log_->error("%s create node err path:%s flags:%d value%s rv:%d",
+                fun, path, flags, value.c_str(), rv
+                );
+    return 1;
+  }
 
+  true_path = buf;
+  log_->info("%s-->create zk node path:%s truepath:%s flags:%d value:%s",
+             fun, path, true_path.c_str(), flags, value.c_str()
+             );
   return 0;
 
+}
+
+int RedisCtrl::node_exist(const char *path)
+{
+  const char *fun = "RedisCtrl::is_node_exist";
+  struct Stat stat;
+  int rv = zoo_exists(zkh_, path, 0, &stat);
+
+  log_->trace("%s-->path:%s "
+              "stat "
+              "czxid:%ld mzxid:%ld ctime:%ld mtime:%ld "
+              "version:%ld cversion:%ld aversion:%ld "
+              "ephemeralOwner:%ld dataLength:%ld numChildren:%ld pzxid:%ld",
+              fun, path,
+              stat.czxid, stat.mzxid, stat.ctime, stat.mtime,
+              stat.version, stat.cversion, stat.aversion,
+              stat.ephemeralOwner, stat.dataLength, stat.numChildren, stat.pzxid
+              );
+
+  if (rv == ZOK) return 0;
+  else if (rv == ZNONODE) return 1;
+  else {
+    log_->error("%s node_exist err path:%s rv:%d",
+                fun, path, rv
+                );
+
+    return 2;
+  }
 }
 
 int RedisCtrl::get_data(const char *path, string &data)
@@ -200,7 +233,7 @@ int RedisCtrl::get_data(const char *path, string &data)
   return 0;
 }
 
-int RedisCtrl::get_check(const char *path, map< string, map<string, int> > &chks)
+int RedisCtrl::get_check(const char *path, map< string, map<string, long> > &chks)
 {
   map< string, set<string> > cls;
   if (get_cluster_node(path, cls)) return 1;
@@ -209,8 +242,8 @@ int RedisCtrl::get_check(const char *path, map< string, map<string, int> > &chks
   char buf[1024];
   for (map< string, set<string> >::const_iterator it = cls.begin();
        it != cls.end(); ++it) {
-    map<string, int> &rdis
-      = chks.insert(pair< string, map<string, int> >(it->first, map<string, int>())).first->second;
+    map<string, long> &rdis
+      = chks.insert(pair< string, map<string, long> >(it->first, map<string, long>())).first->second;
 
     for (set<string>::const_iterator jt = it->second.begin();
          jt != it->second.end(); ++jt) {
@@ -222,7 +255,7 @@ int RedisCtrl::get_check(const char *path, map< string, map<string, int> > &chks
         return 2;
       }
 
-      int idx = cut_idx(REDIS_PREFIX, *jt);
+      long idx = cut_idx(REDIS_PREFIX, *jt);
       if (idx == -1) continue;
 
       rdis[data] = idx;
@@ -246,15 +279,11 @@ void RedisCtrl::check()
   // !!! 先check 给的路径是否存在，不存在创建之
   // 获取锁
 
-  string lock_p = zk_root_path_ + LOCK_PATH;
-  string cfg_p = zk_root_path_ + CONFIG_PATH;
-  string err_p = zk_root_path_ + ERROR_PATH;
-  string check_p = zk_root_path_ + CHECK_PATH;
   //-----------------------------------
 
   map< string, set<string> > cfgs;
 
-  int rv = get_config(cfg_p.c_str(), cfgs);
+  int rv = get_config(zk_cfg_path_.c_str(), cfgs);
   if (rv != 0) {
     log_->error("%s-->get cfg error rv:%d", fun, rv);
     return;
@@ -273,7 +302,7 @@ void RedisCtrl::check()
   }
   // -----------------------------------------
   map< string, set<string> > errs;
-  rv = get_error(err_p.c_str(), errs);
+  rv = get_error(zk_err_path_.c_str(), errs);
   if (rv != 0) {
     log_->error("%s-->get errs error rv:%d", fun, rv);
     return;
@@ -291,8 +320,8 @@ void RedisCtrl::check()
 
 
   // -----------------------------------------
-  map< string, map<string, int> > chks;
-  rv = get_check(check_p.c_str(), chks);
+  map< string, map<string, long> > chks;
+  rv = get_check(zk_check_path_.c_str(), chks);
   if (rv != 0) {
     log_->error("%s-->get checks error rv:%d", fun, rv);
     return;
@@ -300,8 +329,8 @@ void RedisCtrl::check()
   log_->debug("%s-->rv:%d chks.size:%lu",
               fun, rv, chks.size());
 
-  for (map< string, map<string, int> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
-  for (map<string, int>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
+  for (map< string, map<string, long> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
+  for (map<string, long>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
     log_->trace("%s-->checks %s node:%s r%d", fun, it->first.c_str(), jt->first.c_str(), jt->second);
     }
 
@@ -310,22 +339,73 @@ void RedisCtrl::check()
  
   // begin check -----------------------------------------
   // add new check
-
- if (!logic_check_add(cfgs, errs, chks)) return;
+ rv = logic_check_add(cfgs, errs, chks); 
+ if (rv != 0) {
+   log_->error("%s-->get logic_check_add error rv:%d", fun, rv);
+   return;
+ }
 
 
 
 }
 
+int RedisCtrl::check_add_create(const char *path, int flags, const std::string &value, std::string &true_path)
+{
+  int rv = node_exist(path);
+
+  if (rv == 1) {
+    rv = create_node(path, flags, value, true_path);
+    if (rv) return 1;
+    else return node_exist(true_path.c_str());
+  } else if (rv == 2) {
+    return 3;
+  } else  {
+    assert(rv == 0);
+    return 0;
+  }
+
+}
+
 int RedisCtrl::logic_check_add(const std::map< std::string, std::set<std::string> > &cfgs,
                                const std::map< std::string, std::set<std::string> > &errs,
-                               const std::map< std::string, std::map<std::string, int> > &chks)
+                               const std::map< std::string, std::map<std::string, long> > &chks)
 {
   for (map< string, set<string> >::const_iterator it = cfgs.begin();
        it != cfgs.end(); ++it) {
-    for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
 
+    string path = zk_check_path_ + "/";
+    path += it->first;
+    string redis_path = path + "/";
+    redis_path += REDIS_PREFIX;
+    string true_path;
+    
+    
+
+    map< string, map<string, long> >::const_iterator tmp = chks.find(it->first);
+    map< string, set<string> >::const_iterator tmp_err = errs.find(it->first);
+
+    if (tmp == chks.end()) {
+      if (create_node(path.c_str(), 0, "", true_path)) {
+        return 1;
+      }
     }
+
+    for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
+      if (tmp != chks.end() && tmp->second.find(*jt) != tmp->second.end()) {
+        continue;
+      }
+
+
+      if (tmp_err != errs.end() && tmp_err->second.find(*jt) != tmp_err->second.end()) {
+        continue;
+      }
+
+
+      if (create_node(redis_path.c_str(), ZOO_SEQUENCE, *jt, true_path)) {
+        return 2;
+      }
+    }
+
 
   }
 

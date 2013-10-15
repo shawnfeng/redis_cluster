@@ -1,4 +1,5 @@
 *.o
 *.d
 online/test_online
+online/test_ctrl
 src/libredis_client.a
