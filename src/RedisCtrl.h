@@ -26,7 +26,9 @@ class RedisCtrl {
   std::string zk_check_path_;
 
   // ---------
-  void get_nodes(const char *path, std::set<std::string> &addrs);
+  bool isvalid_addr(const char *addr);
+
+  int get_nodes(const char *path, bool isaddr, std::set<std::string> &addrs);
   long cut_idx(const char *pref, const std::string &cluster);
 
   int get_data(const char *path, std::string &data);

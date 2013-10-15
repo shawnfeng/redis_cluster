@@ -1,5 +1,8 @@
 #include <boost/lexical_cast.hpp>
+
+
 #include "RedisCtrl.h"
+#include "Util.h"
 
 using namespace std;
 
@@ -58,7 +61,16 @@ long RedisCtrl::cut_idx(const char *pref, const std::string &cluster)
   return idx;
 }
 
-void RedisCtrl::get_nodes(const char *path, set<string> &addrs)
+bool RedisCtrl::isvalid_addr(const char *addr)
+{
+  string err;
+  string ip;
+  int port;
+  return str_ipv4(addr, ip, port, err);
+
+}
+
+int RedisCtrl::get_nodes(const char *path, bool isaddr, set<string> &addrs)
 {
   const char *fun = "RedisCtrl::get_nodes";
   struct String_vector node_info;
@@ -68,16 +80,28 @@ void RedisCtrl::get_nodes(const char *path, set<string> &addrs)
 		for (int i = 0; i < node_info.count; ++i) {
 			char *chd = *dp++;
 			log_->debug("%s-->%s/%s", fun, path, chd);
-      addrs.insert(chd);
+
+      if (isaddr) {
+        if (isvalid_addr(chd)) {
+          addrs.insert(chd);
+        } else {
+          log_->error("%s-->invalid addr %s/%s", fun, path, chd);
+        }
+      } else {
+        addrs.insert(chd);
+      }
 		}
 
 
     deallocate_String_vector(&node_info);
   } else {
     log_->error("%s-->rc:%d get path %s error", fun, rc, path);
+    return 1;
   }
 
   log_->info("%s-->path:%s addrs.size:%lu", fun, path, addrs.size());
+  return 0;
+
 
 }
 
@@ -115,7 +139,7 @@ int RedisCtrl::get_cluster_node(const char *path, bool ischeck, map< string, set
     string tmp = path;
     tmp += "/";
     tmp += *it;
-    get_nodes(tmp.c_str(), nodes);
+    if (get_nodes(tmp.c_str(), ischeck, nodes)) return 2;
 
   }
   return 0;
