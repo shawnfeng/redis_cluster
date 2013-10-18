@@ -484,7 +484,8 @@ void RedisCtrl::check()
  check_error(redis_cfgs);
  log_->info("%s-->check_error", fun);
  // normal check
-
+ check_check(redis_cfgs);
+ log_->info("%s-->check_check", fun);
 }
 
 int RedisCtrl::check_add_create(const char *path, int flags, const std::string &value, std::string &true_path)
@@ -544,6 +545,7 @@ int RedisCtrl::logic_error_rm(const std::map< std::string, std::set<std::string>
 int RedisCtrl::logic_check_rm(const std::map< std::string, std::set<std::string> > &cfgs,
                               const std::map< std::string, std::map<std::string, string> > &chks)
 {
+  const char *fun = "RedisCtrl::logic_check_rm";
   for (map< string, map<string, string> >::const_iterator it = chks.begin();
        it != chks.end(); ++it) {
 
@@ -558,15 +560,18 @@ int RedisCtrl::logic_check_rm(const std::map< std::string, std::set<std::string>
       snprintf(buf, sizeof(buf), "%s/%s", path.c_str(), jt->second.c_str());
 
       if (tmp_cfg == cfgs.end()) {
+        log_->warn("%s-->can not find cluster config %s %s", fun, buf, jt->first.c_str());
         if (delete_node(buf)) return 2;
 
       } else if (tmp_cfg->second.find(jt->first) == tmp_cfg->second.end()) {
+        log_->warn("%s-->can not find node config %s %s", fun, buf, jt->first.c_str());
         if (delete_node(buf)) return 2;
 
       }
     }
 
     if (tmp_cfg == cfgs.end()) {
+      log_->warn("%s-->can not find cluster rm cluster %s", fun, it->first.c_str());
       if (delete_node(path.c_str())) return 1;
 
     }
@@ -582,6 +587,7 @@ int RedisCtrl::logic_check_add(const std::map< std::string, std::set<std::string
                                const std::map< std::string, std::set<std::string> > &errs,
                                const std::map< std::string, std::map<std::string, string> > &chks)
 {
+  const char *fun = "RedisCtrl::logic_check_add";
   for (map< string, set<string> >::const_iterator it = cfgs.begin();
        it != cfgs.end(); ++it) {
 
@@ -596,7 +602,16 @@ int RedisCtrl::logic_check_add(const std::map< std::string, std::set<std::string
     map< string, map<string, string> >::const_iterator tmp = chks.find(it->first);
     map< string, set<string> >::const_iterator tmp_err = errs.find(it->first);
 
+    if (tmp_err == errs.end()) {
+      log_->warn("%s-->can not find err cluster %s", fun, it->first.c_str());
+      if (create_node((zk_err_path_+"/"+it->first).c_str(), 0, "", true_path)) {
+        return 1;
+      }
+    }
+
+
     if (tmp == chks.end()) {
+      log_->warn("%s-->can not find check cluster %s", fun, it->first.c_str());
       if (create_node(path.c_str(), 0, "", true_path)) {
         return 1;
       }
@@ -613,6 +628,7 @@ int RedisCtrl::logic_check_add(const std::map< std::string, std::set<std::string
       }
 
 
+      log_->warn("%s-->can not find check node %s %s", fun, redis_path.c_str(), jt->c_str());
       if (create_node(redis_path.c_str(), ZOO_SEQUENCE, *jt, true_path)) {
         return 2;
       }
@@ -752,5 +768,57 @@ void RedisCtrl::check_error(const map<string, string> &cfgs)
 
   }
 
+
+}
+
+
+void RedisCtrl::check_check(const map<string, string> &cfgs)
+{
+  const char *fun = "RedisCtrl::check_check";
+
+  string true_path;
+  char path_buff[1024];
+
+
+  map< string, map<string, string> > chks;
+  int rv = get_check(zk_check_path_.c_str(), chks);
+  log_->info("%s-->get check rv:%d size:%lu", fun, rv, chks.size());
+  if (rv != 0) {
+    log_->error("%s-->get checks error rv:%d", fun, rv);
+    return;
+  }
+
+
+  for (map< string, map<string, string> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
+    for (map<string, string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
+      log_->trace("%s-->checks %s node:%s %s", fun, it->first.c_str(), jt->first.c_str(), jt->second.c_str());
+
+      if (cfgs.find(jt->first) == cfgs.end()) {
+        log_->warn("%s-->set error %s/%s", fun, it->first.c_str(), jt->first.c_str());
+
+        snprintf(path_buff, sizeof(path_buff), "%s/%s/%s",
+                 zk_err_path_.c_str(),
+                 it->first.c_str(),
+                 jt->first.c_str()
+                 );
+
+        if (create_node(path_buff, 0, "", true_path)) {
+          return;
+        }
+        
+        snprintf(path_buff, sizeof(path_buff), "%s/%s/%s",
+                 zk_check_path_.c_str(),
+                 it->first.c_str(),
+                 jt->second.c_str()
+                 );
+        if (delete_node(path_buff)) {
+          return;
+        }
+      }
+
+
+    }
+
+  }
 
 }
