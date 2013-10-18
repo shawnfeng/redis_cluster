@@ -27,6 +27,8 @@ class RedisCtrl {
   std::string zk_node_path_;
 
   // ---------
+  std::string ip_port(const std::string &addr);
+  
   bool isvalid_addr(const char *addr);
 
   int get_nodes(const char *path, bool isaddr, std::set<std::string> &addrs);
@@ -58,8 +60,14 @@ class RedisCtrl {
 
   // redis health check
   void check_redis(const std::set<std::string> &addrs, std::map<std::string, std::string> &cfgs, int try_times = 3);
-  void check_error(const std::map<std::string, std::string> &cfgs);
-  void check_check(const std::map<std::string, std::string> &cfgs);
+  int check_error(const std::map<std::string, std::string> &cfgs);
+  int check_check(const std::map<std::string, std::string> &cfgs);
+
+  void sort_redis(const std::map<std::string, std::string> &rds,
+                  std::vector< std::pair<std::string, std::string> > &seqs);
+  int gen_legal_redis(const std::map<std::string, std::string> &cfgs);
+  void do_slaveof_cmd(const std::map<std::string, std::string> &cmds, int try_times = 3);
+  int legal_cmp(std::set<std::string> &legal_redis);
 
  public:
 
