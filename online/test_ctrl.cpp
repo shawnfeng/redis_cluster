@@ -5,7 +5,7 @@
 #include "../src/RedisCtrl.h"
 using namespace std;
 
-LogOut g_log;
+LogOut g_log(NULL, NULL, LogOut::log_info, LogOut::log_warn, LogOut::log_error);
 
 int main (int argc, char **argv)
 {

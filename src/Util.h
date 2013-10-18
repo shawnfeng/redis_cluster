@@ -65,6 +65,8 @@ void int64_ipv4(uint64_t ipv4, char *ip, size_t len, int &port);
 
 bool str_ipv4(const std::string &addr, std::string &ip, int &port, std::string &err);
 
+bool str_ipv4_int64(const std::string &addr, uint64_t &ipv4, std::string &err);
+void int64_str_ipv4(uint64_t ipv4, std::string &addr);
 
 class TimeUse {
   long bt_;

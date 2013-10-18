@@ -363,11 +363,13 @@ void RedisCtrl::check()
 {
   const char *fun = "RedisCtrl::check";
 
+  log_->info("%s-->check zk %p", fun, zkh_);
   if (!zkh_) {
     log_->warn("%s-->zkhandle NULL", fun);
     return;
   }
 
+  log_->info("%s-->init check", fun);
   int rv = init_path_check();
   if (rv) {
     log_->error("%s-->init check path error rv:%d", fun, rv);
@@ -382,6 +384,7 @@ void RedisCtrl::check()
   map< string, set<string> > cfgs;
 
   rv = get_config(zk_cfg_path_.c_str(), cfgs);
+  log_->info("%s-->get config rv:%d size:%lu", fun, rv, cfgs.size());
   if (rv != 0) {
     log_->error("%s-->get cfg error rv:%d", fun, rv);
     return;
@@ -394,13 +397,14 @@ void RedisCtrl::check()
   for (map< string, set<string> >::const_iterator it = cfgs.begin();
        it != cfgs.end(); ++it) {
     for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-      log_->trace("%s-->configinfo %s node:%s", fun, it->first.c_str(), jt->c_str());
+      log_->info("%s-->configinfo %s node:%s", fun, it->first.c_str(), jt->c_str());
     }
 
   }
   // -----------------------------------------
   map< string, set<string> > errs;
   rv = get_error(zk_err_path_.c_str(), errs);
+  log_->info("%s-->get error rv:%d size:%lu", fun, rv, errs.size());
   if (rv != 0) {
     log_->error("%s-->get errs error rv:%d", fun, rv);
     return;
@@ -411,7 +415,7 @@ void RedisCtrl::check()
   for (map< string, set<string> >::const_iterator it = errs.begin();
        it != errs.end(); ++it) {
     for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-      log_->trace("%s-->errors %s node:%s", fun, it->first.c_str(), jt->c_str());
+      log_->info("%s-->errors %s node:%s", fun, it->first.c_str(), jt->c_str());
     }
 
   }
@@ -420,6 +424,7 @@ void RedisCtrl::check()
   // -----------------------------------------
   map< string, map<string, string> > chks;
   rv = get_check(zk_check_path_.c_str(), chks);
+  log_->info("%s-->get check rv:%d size:%lu", fun, rv, chks.size());
   if (rv != 0) {
     log_->error("%s-->get checks error rv:%d", fun, rv);
     return;
@@ -429,7 +434,7 @@ void RedisCtrl::check()
 
   for (map< string, map<string, string> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
   for (map<string, string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-    log_->trace("%s-->checks %s node:%s %s", fun, it->first.c_str(), jt->first.c_str(), jt->second.c_str());
+    log_->info("%s-->checks %s node:%s %s", fun, it->first.c_str(), jt->first.c_str(), jt->second.c_str());
     }
 
   }
@@ -438,6 +443,7 @@ void RedisCtrl::check()
   // begin check -----------------------------------------
   // add new check
  rv = logic_check_add(cfgs, errs, chks); 
+ log_->info("%s-->logic_check_add rv:%d", fun, rv);
  if (rv != 0) {
    log_->error("%s-->get logic_check_add error rv:%d", fun, rv);
    return;
@@ -445,6 +451,7 @@ void RedisCtrl::check()
 
  // error remove check
  rv = logic_error_rm(cfgs, errs);
+ log_->info("%s-->logic_error_rm rv:%d", fun, rv);
  if (rv != 0) {
    log_->error("%s-->get logic_error_rm error rv:%d", fun, rv);
    return;
@@ -452,11 +459,31 @@ void RedisCtrl::check()
 
  // check remove
  rv = logic_check_rm(cfgs, chks);
+ log_->info("%s-->logic_check_rm rv:%d", fun, rv);
  if (rv != 0) {
    log_->error("%s-->get logic_check_rm error rv:%d", fun, rv);
    return;
  }
 
+
+ // check && get redis config
+ set<string> addrs;
+ for (map< string, set<string> >::const_iterator it = cfgs.begin();
+      it != cfgs.end(); ++it) {
+   addrs.insert(it->second.begin(), it->second.end());
+ }
+
+ map<string, string> redis_cfgs;
+ check_redis(addrs,  redis_cfgs);
+ log_->info("%s-->check_redis size:%lu", fun, redis_cfgs.size());
+ for (map<string, string>::const_iterator it = redis_cfgs.begin(); it != redis_cfgs.end(); ++it) {
+   log_->info("%s-->check_redis addr:%s slaveof:%s", fun, it->first.c_str(), it->second.c_str());
+ }
+
+ // error check
+ check_error(redis_cfgs);
+ log_->info("%s-->check_error", fun);
+ // normal check
 
 }
 
@@ -480,6 +507,7 @@ int RedisCtrl::check_add_create(const char *path, int flags, const std::string &
 int RedisCtrl::logic_error_rm(const std::map< std::string, std::set<std::string> > &cfgs,
                               const std::map< std::string, std::set<std::string> > &errs)
 {
+  const char *fun = "RedisCtrl::logic_error_rm";
   for (map< string, set<string> >::const_iterator it = errs.begin();
        it != errs.end(); ++it) {
 
@@ -491,15 +519,18 @@ int RedisCtrl::logic_error_rm(const std::map< std::string, std::set<std::string>
 
     for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
       if (tmp_cfg == cfgs.end()) {
+        log_->warn("%s-->can not find cluster config %s rm node %s", fun, it->first.c_str(), jt->c_str());
         if (delete_node((path + "/" + *jt).c_str())) return 2;
 
       } else if (tmp_cfg->second.find(*jt) == tmp_cfg->second.end()) {
+        log_->warn("%s-->can not find node config %s/%s", fun, it->first.c_str(),jt->c_str());
         if (delete_node((path + "/" + *jt).c_str())) return 2;
 
       }
     }
 
     if (tmp_cfg == cfgs.end()) {
+        log_->warn("%s-->can not find cluster config %s rm cluster", fun, it->first.c_str());
       if (delete_node(path.c_str())) return 1;
 
     }
@@ -591,4 +622,135 @@ int RedisCtrl::logic_check_add(const std::map< std::string, std::set<std::string
   }
 
   return 0;
+}
+
+void RedisCtrl::check_redis(const set<string> &addrs, map<string, string> &cfgs, int try_times)
+{
+  const char *fun = "RedisCtrl::check_redis";
+
+  RedisRvs rv;
+  map< uint64_t, vector<string> > addr_cmd;
+  
+
+  for (set<string>::const_iterator it = addrs.begin();
+       it != addrs.end(); ++it) {
+    uint64_t addr;
+    string err;
+
+    if (!str_ipv4_int64(*it, addr, err)) {
+      log_->error("%s-->error addr:%s err:%s", fun, it->c_str(), err.c_str());
+    } else {
+      addr_cmd[addr] = vector<string>();
+    }
+  }
+  // CONFIG GET commend
+  for (map< uint64_t, vector<string> >::iterator it = addr_cmd.begin();
+       it != addr_cmd.end(); ++it) {
+
+    it->second.push_back("CONFIG");
+    it->second.push_back("GET");
+    it->second.push_back("slaveof");
+
+  }
+
+  re_.cmd(rv, "check_redis", addr_cmd, 100, "", false);
+
+
+	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+    string addr;
+    int64_str_ipv4(it->first, addr);
+    it->second.dump(log_, addr.c_str(), 1);
+    const RedisRv &tmp = it->second;
+
+    if (tmp.type != REDIS_REPLY_ARRAY
+        || tmp.element.size() != 2
+        || tmp.element.at(0).type != REDIS_REPLY_STRING
+        || tmp.element.at(1).type != REDIS_REPLY_STRING
+        ) {
+
+      log_->error("%s-->retrun config invalid format addr:%s", fun, addr.c_str());
+      continue;
+
+    } else {
+      if (tmp.element.at(0).str != "slaveof") {
+        log_->error("%s-->retrun config invalid back:%s addr:%s", fun, tmp.element.at(0).str.c_str(), addr.c_str());
+        continue;
+
+      } else {
+        cfgs[addr] = tmp.element.at(1).str;
+      }
+
+    }
+
+
+	}
+
+  set<string> err_addrs;
+  for (set<string>::const_iterator it = addrs.begin();
+       it != addrs.end(); ++it) {
+    if (cfgs.find(*it) == cfgs.end()) {
+      err_addrs.insert(*it);
+    }
+  }
+
+
+  log_->info("%s-->addrs.size:%lu erraddrs.size:%lu cfgs:%lu try_times:%d",
+             fun, addrs.size(), err_addrs.size(), cfgs.size(), try_times);
+
+  if (!err_addrs.empty() && --try_times) {
+    sleep(1); // wait check
+    check_redis(err_addrs, cfgs, try_times);
+  }
+
+}
+
+void RedisCtrl::check_error(const map<string, string> &cfgs)
+{
+  const char *fun = "RedisCtrl::check_error";
+
+  string true_path;
+  char path_buff[1024];
+
+
+  map< string, set<string> > errs;
+  int rv = get_error(zk_err_path_.c_str(), errs);
+  if (rv != 0) {
+    log_->error("%s-->get errs error rv:%d", fun, rv);
+    return;
+  }
+
+
+  for (map< string, set<string> >::const_iterator it = errs.begin();
+       it != errs.end(); ++it) {
+    for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
+      log_->trace("%s-->check %s node:%s", fun, it->first.c_str(), jt->c_str());
+
+      if (cfgs.find(*jt) != cfgs.end()) {
+        log_->info("%s-->repair %s node:%s", fun, it->first.c_str(), jt->c_str());
+        // node repair
+        snprintf(path_buff, sizeof(path_buff), "%s/%s/%s",
+                 zk_err_path_.c_str(),
+                 it->first.c_str(),
+                 jt->c_str()
+                 );
+
+        if (delete_node(path_buff)) {
+          return;
+        }
+        
+        snprintf(path_buff, sizeof(path_buff), "%s/%s/%s",
+                 zk_check_path_.c_str(),
+                 it->first.c_str(),
+                 REDIS_PREFIX
+                 );
+        if (create_node(path_buff, ZOO_SEQUENCE, *jt, true_path)) {
+          return;
+        }
+      }
+      
+    }
+
+  }
+
+
 }

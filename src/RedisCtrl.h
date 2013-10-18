@@ -56,6 +56,10 @@ class RedisCtrl {
 
   int init_path_check();
 
+  // redis health check
+  void check_redis(const std::set<std::string> &addrs, std::map<std::string, std::string> &cfgs, int try_times = 3);
+  void check_error(const std::map<std::string, std::string> &cfgs);
+
  public:
 
  RedisCtrl(LogOut *log,

@@ -8,7 +8,7 @@
 
 #include "Util.h"
 
-
+using namespace std;
 uint64_t ipv4_int64(const char *ip, int port)
 {
 	uint64_t ipv4 = 0;
@@ -47,6 +47,31 @@ bool str_ipv4(const std::string &addr, std::string &ip, int &port, std::string &
 	return true;
 
 }
+
+bool str_ipv4_int64(const std::string &addr, uint64_t &ipv4, std::string &err)
+{
+  string ip;
+  int port;
+  if (!str_ipv4(addr, ip, port, err)) {
+    return false;
+  } else {
+    ipv4 = ipv4_int64(ip.c_str(), port);
+    return true;
+  }
+}
+
+void int64_str_ipv4(uint64_t ipv4, std::string &addr)
+{
+  char ip[50];
+  int port;
+  int64_ipv4(ipv4, ip, sizeof(ip), port);
+
+  char buff[100];
+  snprintf(buff, sizeof(buff), "%s:%d", ip, port);
+  addr = buff;
+
+}
+
 
 // ===================
 void LogOut::log_trace(const char *log)
