@@ -388,7 +388,7 @@ void RedisEvent::cmd(RedisRvs &rv,
     log_->error("%s-->addr:%lu err:%s", fun, it->first, it->second.str.c_str());
   }
 
-	log_->info("%s-->k:%s size:%lu wsz:%d istimeout:%d tm:%ld",
+	log_->debug("%s-->k:%s size:%lu wsz:%d istimeout:%d tm:%ld",
              fun, log_key, addr_cmd.size(), wsz, is_timeout, tu.intv());
 
 }
