@@ -138,6 +138,12 @@ void RedisHash::update_ends(const vector< pair<string, int> > &ends)
   addrs_v_.assign(addrs_.begin(), addrs_.end());
 }
 
+void RedisHash::redis_all(std::set<uint64_t> &addrs)
+{
+	boost::shared_lock< boost::shared_mutex > lock(smux_);
+  addrs = addrs_;
+}
+
 uint64_t RedisHash::redis_addr(const std::string &key)
 {
 	const char *fun = "RedisHash::hash";

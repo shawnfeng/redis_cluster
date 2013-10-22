@@ -9,7 +9,7 @@ LogOut g_log(NULL, NULL, LogOut::log_info, LogOut::log_warn, LogOut::log_error);
 
 int main (int argc, char **argv)
 {
-  RedisCtrl rc(&g_log, "10.2.72.12:4180,10.2.72.12:4181,10.2.72.12:4182", "/tx/online");
+  RedisCtrl rc(&g_log, "10.4.25.15:4180,10.4.25.15:4181,10.4.25.15:4182", "/tx/online");
   rc.start();
 
   for (;;) {

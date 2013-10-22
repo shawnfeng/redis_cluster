@@ -50,7 +50,7 @@ class RedisHash {
 	int start();
 
   uint64_t redis_addr(const std::string &key);
-
+  void redis_all(std::set<uint64_t> &addrs);
   //	void hash_addr(const std::vector<std::string> &hash, std::set<uint64_t> &addrs);
 	LogOut *log() { return log_; }
 

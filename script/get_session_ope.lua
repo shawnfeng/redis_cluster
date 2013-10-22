@@ -1,7 +1,7 @@
 local uid = KEYS[1]
 
-local kuid = 'U_'..uid
+local kuid = 'U.'..uid
 
 
-return redis.call('HGETALL', kuid)
+return redis.call('SMEMBERS', kuid)
 

@@ -11,6 +11,7 @@ static const char *offline_ope = "/offline.lua";
 static const char *get_session_info_ope = "/get_session_info.lua";
 static const char *get_session_ope = "/get_session_ope.lua";
 static const char *get_multi_ope = "/get_multi.lua";
+static const char *get_timeout_ope = "/timeout_rm.lua";
 
 
 static bool check_sha1(const char *path, string &data, string &sha1)
@@ -91,6 +92,13 @@ OnlineCtrl::OnlineCtrl(void (*log_t)(const char *),
 		log_.error("%s error check sha1", path.c_str());
 	}
 	log_.info("data:%s sha1:%s", s_multi_.data.c_str(), s_multi_.sha1.c_str());
+
+
+  path = sp_ + get_timeout_ope;
+	if (!check_sha1(path.c_str(), s_timeout_rm_.data, s_timeout_rm_.sha1)) {
+		log_.error("%s error check sha1", path.c_str());
+	}
+	log_.info("data:%s sha1:%s", s_timeout_rm_.data.c_str(), s_timeout_rm_.sha1.c_str());
 
 
 
@@ -409,4 +417,43 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
 
   }
   log_.info("%s-->actor:%ld tm:%ld", fun, actor, tu.intv());
+}
+
+
+int OnlineCtrl::timeout_rm(int timeout, int stamp, int idx, int count)
+{
+  TimeUse tu;
+  const char *fun = "OnlineCtrl::timeout_rm";
+
+  set<uint64_t> all_redis;
+  rh_.redis_all(all_redis);
+
+  map< uint64_t, vector<string> > addr_cmd;
+
+  for (set<uint64_t>::const_iterator it = all_redis.begin(); it != all_redis.end(); ++it) {
+    vector<string> &args = addr_cmd.insert(pair< uint64_t, vector<string> >(*it, vector<string>())).first->second;    
+
+    args.push_back("EVALSHA");
+    args.push_back(s_timeout_rm_.sha1);
+    args.push_back("3");
+    args.push_back(boost::lexical_cast<string>(stamp));
+    args.push_back(boost::lexical_cast<string>(idx));
+    args.push_back(boost::lexical_cast<string>(count));
+
+  }
+
+  RedisRvs rv;
+  re_.cmd(rv, "timeout_rm", addr_cmd, timeout, s_timeout_rm_.data, false);
+
+  for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+    uint64_t addr = it->first;
+    const RedisRv &tmp = it->second;
+    string saddr = fun + boost::lexical_cast<string>(addr);
+    tmp.dump(&log_, saddr.c_str(), 2);
+
+  }
+
+
+  log_.info("%s-->stamp:%d idx:%d cn:%d tm:%lu", fun, stamp, idx, count, tu.intv());
+  return 1;
 }
