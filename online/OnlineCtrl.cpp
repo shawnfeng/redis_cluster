@@ -186,7 +186,7 @@ void OnlineCtrl::online(int timeout, long uid,
   args.push_back(boost::lexical_cast<string>(time(NULL)));
   args.insert(args.end(), kvs.begin(), kvs.end());
 
-	log_.info("%s-->arg uid:%ld tm:%ld", fun, uid, tu.intv_reset());
+  //	log_.info("%s-->arg uid:%ld tm:%ld", fun, uid, tu.intv_reset());
 	log_.debug("%s-->uid:%ld session:%s rv.size:%lu", fun, uid, session.c_str(), rv.size());
   
   single_uid_commend(fun, timeout, suid, args, s_online_.data, rv);

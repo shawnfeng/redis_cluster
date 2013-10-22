@@ -236,9 +236,8 @@ void RedisEvent::cmd(RedisRvs &rv,
 	//userdata *u = (userdata *)ev_userdata (loop_);
   TimeUse tu;
 	const char *fun = "RedisEvent::cmd";
-	ReqCount rcount(req_count_);
 
-	log_->debug("%s-->k:%s size:%lu rcount=%d", fun, log_key, addr_cmd.size(), rcount.cn());
+	log_->debug("%s-->k:%s size:%lu", fun, log_key, addr_cmd.size());
 	if (addr_cmd.empty()) {
 		log_->warn("%s-->k:%s empty redis context", fun, log_key);
 		return;
@@ -389,8 +388,8 @@ void RedisEvent::cmd(RedisRvs &rv,
     log_->error("%s-->addr:%lu err:%s", fun, it->first, it->second.str.c_str());
   }
 
-	log_->info("%s-->k:%s size:%lu wsz:%d istimeout:%d rcount:%d tm:%ld",
-             fun, log_key, addr_cmd.size(), wsz, is_timeout, rcount.cn(), tu.intv());
+	log_->info("%s-->k:%s size:%lu wsz:%d istimeout:%d tm:%ld",
+             fun, log_key, addr_cmd.size(), wsz, is_timeout, tu.intv());
 
 }
 

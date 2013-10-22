@@ -2,7 +2,7 @@ local st = KEYS[1]
 local idx = KEYS[2]
 local cn = KEYS[3]
 
-
+st = tonumber(st) - 100
 local kc = 'C.'..idx
 
 

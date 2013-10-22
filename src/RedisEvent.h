@@ -56,15 +56,6 @@ public:
 
 };
 
-class ReqCount {
-	int &cn_;
- public:
- ReqCount(int &cn) : cn_(++cn) {}
-	~ReqCount() { --cn_; }
-
-	int cn() { return cn_; }
-};
-
 struct RedisRv {
   int type; /* REDIS_REPLY_* */
   long long integer; /* The integer when type is REDIS_REPLY_INTEGER */
