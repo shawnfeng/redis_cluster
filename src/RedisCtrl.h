@@ -89,6 +89,12 @@ class RedisCtrl {
   int start();
 
   void check();
+
+  bool get_lock();
+  void free_lock();
+
+
 };
+
 
 #endif

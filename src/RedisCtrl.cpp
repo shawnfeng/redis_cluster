@@ -379,6 +379,50 @@ int RedisCtrl::init_path_check()
   return 0;
 }
 
+class local_lock {
+  RedisCtrl *rc_;
+  bool islock_;
+public:
+  local_lock(RedisCtrl *rc) : rc_(rc), islock_(false) {}
+  bool lock()
+  {
+    islock_ = rc_->get_lock();
+    return islock_;
+  }
+
+  ~local_lock()
+  {
+    if (islock_) {
+      rc_->free_lock();
+    }
+  }
+};
+
+void RedisCtrl::free_lock()
+{
+  const char *fun = "RedisCtrl::free_lock";
+  if (delete_node((zk_lock_path_+"/lock").c_str())) {
+    log_->error("%s-->error free lock", fun);
+  } else {
+    log_->info("%s-->succ free lock", fun);
+  }
+}
+
+bool RedisCtrl::get_lock()
+{
+  const char *fun = "RedisCtrl::get_lock";
+  string true_path;
+  int rv = create_node((zk_lock_path_+"/lock").c_str(), ZOO_EPHEMERAL, "", true_path);
+
+  if (rv) {
+    log_->info("%s-->fail get lock", fun);
+    return false;
+  } else {
+    log_->info("%s-->succ get lock %s", fun, true_path.c_str());
+    return true;
+  }
+}
+
 void RedisCtrl::check()
 {
   const char *fun = "RedisCtrl::check";
@@ -396,8 +440,12 @@ void RedisCtrl::check()
     return;
   }
 
-  // !!! 先check 给的路径是否存在，不存在创建之
-  // 获取锁
+
+  local_lock lc_lock(this);
+  if (!lc_lock.lock()) {
+    log_->info("%s-->get lock fail", fun);
+    return;
+  }
 
   //-----------------------------------
 
@@ -522,6 +570,8 @@ void RedisCtrl::check()
    log_->error("%s-->gen_legal_redis error rv:%d", fun, rv);
    return;
  }
+
+
 
 }
 
