@@ -84,7 +84,7 @@ void *thread_cb(void* args)
     kvs.push_back(boost::lexical_cast<string>(uid));
     g_log.info("******%ld==============================", uid);
 
-    oc->online(CALL_TIMEOUT, uid, session, kvs);
+    oc->online(CALL_TIMEOUT, uid, session, 200, kvs);
 
     if (IS_GET_SESSIONS_INFO_TEST) {
     g_log.info("******%ld--------------------", uid);

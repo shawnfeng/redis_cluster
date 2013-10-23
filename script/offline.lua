@@ -5,7 +5,8 @@ local kuid = 'U.'..uid
 local ksn = 'S.'..uid..'.'..sn
 local kc = 'C.'..uid % 100
 
-redis.call('SREM', kuid, sn)
+--redis.call('SREM', kuid, sn)
+redis.call('HDEL', kuid, sn)
 redis.call('DEL', ksn)
 redis.call('ZREM', kc, ksn)
 

@@ -47,7 +47,7 @@ class OnlineCtrl {
             const char *script_path
             );
 
- void online(int timeout, long uid, const std::string &session, const std::vector<std::string> &kvs);
+ void online(int timeout, long uid, const std::string &session, int type, const std::vector<std::string> &kvs);
 	void offline(int timeout, long uid, const std::string &session);
 	void get_sessions(int timeout, long uid, std::vector<std::string> &sessions);
 	void get_session_info(int timeout, long uid, const std::string &session, const std::vector<std::string> &ks,

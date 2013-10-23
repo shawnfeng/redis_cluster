@@ -4,7 +4,8 @@ local rv = {}
 for i,uid in ipairs(KEYS) do
 
    local kuid = 'U.'..uid
-   local ses = redis.call('SMEMBERS', kuid)
+   --local ses = redis.call('SMEMBERS', kuid)
+   local ses = redis.call('HKEYS', kuid)
    for j=1, #ses, 1 do
       local sid = {}
       local sn = ses[j]

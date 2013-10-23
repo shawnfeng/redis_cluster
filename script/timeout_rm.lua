@@ -18,7 +18,8 @@ for i=1, #ses, 2 do
    local uid = string.sub(ksn, 3, idx-1)
    local sn = string.sub(ksn, idx+1)
 
-   redis.call('SREM', 'U.'..uid, sn)
+   --redis.call('SREM', 'U.'..uid, sn)
+   redis.call('HDEL', 'U.'..uid, sn)
 end
 
 

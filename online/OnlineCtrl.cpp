@@ -159,8 +159,9 @@ void OnlineCtrl::offline(int timeout, long uid, const std::string &session)
 
 
 void OnlineCtrl::online(int timeout, long uid,
-			const string &session,
-			const vector<string> &kvs)
+                        const string &session,
+                        int type,
+                        const vector<string> &kvs)
 {
   TimeUse tu;
   const char *fun = "OnlineCtrl::online";
@@ -180,9 +181,10 @@ void OnlineCtrl::online(int timeout, long uid,
   args.push_back("EVALSHA");
   args.push_back(s_online_.sha1);
 
-  args.push_back("3");
+  args.push_back("4");
   args.push_back(suid);
   args.push_back(session);
+  args.push_back(boost::lexical_cast<string>(type));
   args.push_back(boost::lexical_cast<string>(time(NULL)));
   args.insert(args.end(), kvs.begin(), kvs.end());
 
