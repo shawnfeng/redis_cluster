@@ -8,7 +8,7 @@ test_online: OnlineCtrl.o test.o
 test_ctrl: test_ctrl.o
 	$(CC) -o test_ctrl test_ctrl.o $(TEST_LINK_FLAG)
 
-OnlineCtrl.o: OnlineCtrl.cpp OnlineCtrl.h
+OnlineCtrl.o: OnlineCtrl.cpp OnlineCtrl.h OnlineProto.h
 	$(CC) $(CCFLAGS) OnlineCtrl.cpp
 
 test.o: test.cpp OnlineCtrl.h

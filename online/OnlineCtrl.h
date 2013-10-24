@@ -6,6 +6,8 @@
 #include "../src/RedisEvent.h"
 #include "../src/RedisHash.h"
 
+#include "OnlineProto.h"
+
 class OnlineCtrl {
   struct script_t {
     std::string sha1;
@@ -18,13 +20,17 @@ class OnlineCtrl {
 
 
   std::string sp_;
-
+  /*
   script_t s_online_;
   script_t s_offline_;
+  */
   script_t s_session_info_;
   script_t s_sessions_;
   script_t s_multi_;
   script_t s_timeout_rm_;
+
+  script_t s_syn_;
+  script_t s_fin_;
 
  private:
   void single_uid_commend(const char *fun,
@@ -34,6 +40,7 @@ class OnlineCtrl {
                           RedisRvs &rv);
 
   void one_uid_session(long actor, const RedisRv &rv, std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions);
+  void load_script(const std::string &path, script_t &scp);
  public:
  OnlineCtrl(void (*log_t)(const char *),
             void (*log_d)(const char *),
@@ -47,8 +54,20 @@ class OnlineCtrl {
             const char *script_path
             );
 
+ //-------------------logic connection level interface-----------------------
+ int syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
+ int fin(int timeout, long uid, const proto_fin &proto);
+ int heart(int timeout, long uid, const proto_heart &proto, proto_idx_pair &idx);
+ int ack(int timeout, long uid, const proto_ack &proto);
+ // void msg(int timeout, long uid, const proto_msg &proto);
+ //--------bussiness level interface--------------------
+ // ...
+
+ //-----------------------------
+ /*
  void online(int timeout, long uid, const std::string &session, int type, const std::vector<std::string> &kvs);
 	void offline(int timeout, long uid, const std::string &session);
+ */
 	void get_sessions(int timeout, long uid, std::vector<std::string> &sessions);
 	void get_session_info(int timeout, long uid, const std::string &session, const std::vector<std::string> &ks,
                         std::map<std::string, std::string> &kvs);
@@ -57,7 +76,7 @@ class OnlineCtrl {
                  std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions
                  );
 
-  int timeout_rm(int timeout, int stamp, int idx, int count);
+  int timeout_rm(int timeout, int stamp, int count);
 
 };
 
