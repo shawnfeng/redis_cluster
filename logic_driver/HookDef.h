@@ -1,5 +1,5 @@
-#ifndef __ONLINE_PROTO_H_H__
-#define __ONLINE_PROTO_H_H__
+#ifndef __HOOK_DEFINE_H_H__
+#define __HOOK_DEFINE_H_H__
 #include <string>
 #include <vector>
 
@@ -18,13 +18,13 @@ proto_idx_pair() : send_idx(0), recv_idx(0) {}
   }
 };
 
-struct proto_online_head {
-  std::string logic_conn;
+struct proto_gb_head {
+  long logic_conn;
   proto_idx_pair idx;
 
   int keys(std::vector<std::string> &d) const
   {
-    d.push_back(logic_conn);
+    d.push_back(boost::lexical_cast<std::string>(logic_conn));
     idx.keys(d);
     return (int)d.size();
   }
@@ -32,9 +32,9 @@ struct proto_online_head {
 };
 
 struct proto_syn {
-  proto_online_head head;
+  proto_gb_head head;
   int expire;
-  std::string gate;
+  std::string sublayer_index;
 
   int cli_type;
   //  std::string cli_ver;
@@ -46,7 +46,7 @@ proto_syn() : expire(0), cli_type(-1) {}
   {
     head.keys(d);
     d.push_back(boost::lexical_cast<std::string>(expire));
-    d.push_back(gate);
+    d.push_back(sublayer_index);
 
     d.push_back(boost::lexical_cast<std::string>(cli_type));
     //    d.push_back(cli_ver);
@@ -56,7 +56,7 @@ proto_syn() : expire(0), cli_type(-1) {}
 };
 
 struct proto_fin {
-  proto_online_head head;
+  proto_gb_head head;
   int keys(std::vector<std::string> &d) const
   {
     head.keys(d);
@@ -65,7 +65,7 @@ struct proto_fin {
 };
 
 struct proto_heart {
-  proto_online_head head;
+  proto_gb_head head;
   int expire;
 proto_heart() : expire(0) {}
   int keys(std::vector<std::string> &d) const
@@ -78,7 +78,7 @@ proto_heart() : expire(0) {}
 };
 
 struct proto_ack {
-  proto_online_head head;
+  proto_gb_head head;
   int keys(std::vector<std::string> &d) const
   {
     head.keys(d);
@@ -87,6 +87,9 @@ struct proto_ack {
 
 };
 
+typedef int (*hook_syn_fn)(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
+typedef int (*hook_fin_fn)(int timeout, long uid, const proto_fin &proto);
+typedef int (*hook_upidx_fn)(int timeout, long uid, const proto_heart &proto);
 
 
 #endif

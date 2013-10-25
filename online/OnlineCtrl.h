@@ -6,7 +6,7 @@
 #include "../src/RedisEvent.h"
 #include "../src/RedisHash.h"
 
-#include "OnlineProto.h"
+#include "../logic_driver/HookDef.h"
 
 class OnlineCtrl {
   struct script_t {
@@ -57,8 +57,8 @@ class OnlineCtrl {
  //-------------------logic connection level interface-----------------------
  int syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
  int fin(int timeout, long uid, const proto_fin &proto);
- int heart(int timeout, long uid, const proto_heart &proto, proto_idx_pair &idx);
- int ack(int timeout, long uid, const proto_ack &proto);
+ int upidx(int timeout, long uid, const proto_heart &proto);
+
  // void msg(int timeout, long uid, const proto_msg &proto);
  //--------bussiness level interface--------------------
  // ...

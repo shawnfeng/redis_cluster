@@ -17,7 +17,9 @@ clean:
 	cd src && $(MAKE) $@
 	cd test && $(MAKE) $@
 	cd online && $(MAKE) $@
+	cd logic_driver && $(MAKE) $@
 cleanall:
 	cd src && $(MAKE) $@
 	cd test && $(MAKE) $@
 	cd online && $(MAKE) $@
+	cd logic_driver && $(MAKE) $@

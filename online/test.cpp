@@ -3,6 +3,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "OnlineCtrl.h"
+#include "../logic_driver/LogicCore.h"
 using namespace std;
 
 const int INIT_SLEEP = 2;
@@ -15,6 +16,86 @@ const int GET_SESSIONS_INFO_SLEEP = 2;
 const int CALL_TIMEOUT = 100;
 
 LogOut g_log;
+OnlineCtrl g_oc(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error,
+              "10.2.72.12:4180,10.2.72.12:4181,10.2.72.12:4182",
+              "/tx/online/legal_nodes",
+
+              "/data/home/guangxiang.feng/redis_cluster/script");
+
+int hook_syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx)
+{
+  return g_oc.syn(timeout, uid, proto, idx);
+}
+
+int hook_fin(int timeout, long uid, const proto_fin &proto)
+{
+  return g_oc.fin(timeout, uid, proto);
+}
+
+//int hook_upidx_fn(int timeout, long uid, const proto_heart &proto);
+LogicCore g_lc(&g_log, hook_syn, hook_fin, NULL);
+
+void syn_test()
+{
+  long uid = 10;
+  int cli_tp = 200;
+  size_t conn = 2342134;
+  string sublayer_index = "adfasd/adfw";
+  map<string, string> kvs;
+  kvs["VER"] = "32.23";
+  kvs["FUCK"] = "beauty";
+  g_lc.from_sublayer_synok(uid, cli_tp, conn, sublayer_index, kvs);
+
+}
+
+void fin_test()
+{
+  int head_len = LogicCore::PROTO_LEN_FIN;
+  size_t conn_idx = 2342134;
+  int pro_tp = LogicCore::PROTO_TYPE_FIN;
+  int sendidx = 1;
+  int recvidx = 0;
+  long uid = 10;
+
+  char buff[LogicCore::PROTO_LEN_FIN];
+  char *p = buff;
+  memcpy(p, &head_len, LogicCore::PROTO_LEN_HEAD);
+  p += LogicCore::PROTO_LEN_HEAD;
+
+  memcpy(p, &conn_idx, LogicCore::PROTO_LEN_CONN);
+  p += LogicCore::PROTO_LEN_CONN;
+
+  memcpy(p, &pro_tp, LogicCore::PROTO_LEN_TYPE);
+  p += LogicCore::PROTO_LEN_TYPE;
+
+  memcpy(p, &sendidx, LogicCore::PROTO_LEN_SENDIDX);
+  p += LogicCore::PROTO_LEN_SENDIDX;
+
+  memcpy(p, &recvidx, LogicCore::PROTO_LEN_RECVIDX);
+  p += LogicCore::PROTO_LEN_RECVIDX;
+
+  memcpy(p, &uid, LogicCore::PROTO_LEN_UID);
+  p += LogicCore::PROTO_LEN_UID;
+
+
+  string sublayer_index = "adfasd/adfw";
+  string pro;
+  pro.assign(buff, LogicCore::PROTO_LEN_FIN);
+  g_lc.from_sublayer(sublayer_index, pro);
+
+}
+
+void *logic_driver_thread_cb(void* args)
+{
+  for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
+    //syn_test();
+    fin_test();
+    sleep(1);
+  }
+
+  return NULL;
+}
+
 
 static void test_get_multi(OnlineCtrl *oc)
 {
@@ -110,25 +191,20 @@ void *thread_cb(void* args)
 int main (int argc, char **argv)
 {
 
+	g_log.debug("%u", sizeof(size_t));
 	g_log.debug("%u", sizeof(int));
 	g_log.debug("%u", sizeof(long));
 	g_log.debug("%u", sizeof(long long));
 	g_log.debug("%u", sizeof(long long int));
 
 
-	OnlineCtrl oc(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error,
-
-                "10.2.72.12:4180,10.2.72.12:4181,10.2.72.12:4182",
-                "/tx/online/legal_nodes",
-
-                "/data/home/guangxiang.feng/redis_cluster/script");
 
   sleep(INIT_SLEEP);
 
 	pthread_t pids[THREAD_NUMS];
 	int pn = (int)(sizeof(pids)/sizeof(pids[0]));
 	for (int i = 0; i < pn; ++i) {
-		if (pthread_create(&pids[i], NULL, thread_cb, (void *)&oc)) {
+		if (pthread_create(&pids[i], NULL, logic_driver_thread_cb, NULL)) {
 			printf("create thread error!\n");
 			return -1;  
 		}
@@ -139,29 +215,8 @@ int main (int argc, char **argv)
 		pthread_join(pids[i],NULL);
 	}
 
-  /*
-	long uid = 1000;
-	string session = "fuck2";
-	vector<string> kvs;
-	kvs.push_back("k3");
-	kvs.push_back("v3");
+  //	pause();
 
-
-	sleep(1);
-	oc.online(uid, session, kvs);
-	g_log.debug("=================");
-	sleep(20);
-	oc.online(uid, session, kvs);
-	//oc.offline(uid, session);
-
-	vector<string> ks;
-  oc.get_sessions(uid, ks);
-
-  map<string, string> svs;
-  oc.get_session_info(uid, session, ks, svs);
-
-	pause();
-  */	
 
 	return 0;
 }

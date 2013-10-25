@@ -23,4 +23,4 @@ LINK_FLAG:=$(LINK_FLAG) -L$(RPATH_EV) -lev -Wl,-rpath,$(RPATH_EV)
 LINK_FLAG:=$(LINK_FLAG) -L$(RPATH_HIREDIS) -lhiredis -Wl,-rpath,$(RPATH_HIREDIS)
 LINK_FLAG:=$(LINK_FLAG) -L$(PATH_ZK) -lzookeeper_mt -Wl,-rpath,$(PATH_ZK)
 
-TEST_LINK_FLAG:= -L../src -lredis_client $(LINK_FLAG)
+TEST_LINK_FLAG:= -L../src -L../logic_driver -lredis_client -llogic_driver $(LINK_FLAG)

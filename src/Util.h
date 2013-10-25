@@ -4,7 +4,10 @@
 #include <stdio.h>
 
 #include <stdint.h>
+#include <unistd.h>
+#include <sys/time.h>
 
+#include <string>
 
 class LogOut {
 	void (*log_t_)(const char *);
