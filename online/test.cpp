@@ -17,7 +17,7 @@ const int CALL_TIMEOUT = 100;
 
 LogOut g_log;
 OnlineCtrl g_oc(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error,
-              "10.2.72.12:4180,10.2.72.12:4181,10.2.72.12:4182",
+              "10.4.25.15:4180,10.4.25.15:4181,10.4.25.15:4182",
               "/tx/online/legal_nodes",
 
               "/data/home/guangxiang.feng/redis_cluster/script");
@@ -40,6 +40,33 @@ int hook_timeout_rm(int timeout, int stamp, int count)
 
 //int hook_upidx_fn(int timeout, long uid, const proto_heart &proto);
 LogicCore g_lc(&g_log, hook_syn, hook_fin, NULL, hook_timeout_rm);
+
+void get_multi_test()
+{
+  long actor = 10;
+  map< long, map< string, map<string, string> > > uids_sessions;
+  vector<long> uids;
+  uids.push_back(actor);
+  g_oc.get_multi(CALL_TIMEOUT, actor, uids, uids_sessions);
+
+
+    for (map< long, map< string, map<string, string> > >::const_iterator it = uids_sessions.begin();
+         it != uids_sessions.end(); ++it) {
+      g_log.info("----------test_get_multi 2 size %lu %ld", it->second.size(), it->first);
+      for (map< string, map<string, string> >::const_iterator jt = it->second.begin();
+           jt != it->second.end(); ++jt) {
+
+        g_log.info("----------test_get_multi 3 size %lu %s", jt->second.size(), jt->first.c_str());
+        for (map<string, string>::const_iterator kt = jt->second.begin();
+             kt != jt->second.end(); ++kt) {
+          g_log.info("test_get_multi %ld %s %s:%s", it->first, jt->first.c_str(), kt->first.c_str(), kt->second.c_str());
+        }
+
+      }
+
+    }
+
+}
 
 void syn_test()
 {
@@ -95,7 +122,8 @@ void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     //syn_test();
-    fin_test();
+    //fin_test();
+    get_multi_test();
     sleep(1);
   }
 

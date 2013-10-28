@@ -969,7 +969,8 @@ int RedisCtrl::gen_legal_redis(const std::map<std::string, std::string> &cfgs)
 
 
 
-  set<string> legal_redis;
+  //  set<string> legal_redis;
+  map< string, vector<string> > cluster_legal_redis;
   map<string, string> cmds;
 
   for (map< string, map<string, string> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
@@ -979,8 +980,21 @@ int RedisCtrl::gen_legal_redis(const std::map<std::string, std::string> &cfgs)
     vector< pair<string, string> > rds_seq;
     sort_redis(rds_seq_map, rds_seq);
 
+    vector<string> &legal_redis = cluster_legal_redis.insert(
+                                                             pair< string, vector<string> >
+                                                               (cluster, vector<string>())
+                                                               ).first->second;
+
     if (!rds_seq.empty()) {
-      legal_redis.insert(rds_seq.at(0).first);
+      //legal_redis.insert(rds_seq.at(0).first);
+      vector<string> tmp;
+      for (vector< pair<string, string> >::const_iterator jt = rds_seq.begin();
+             jt != rds_seq.end(); ++jt) {
+        tmp.push_back(jt->first);
+
+      }
+      legal_redis.swap(tmp);
+
     } else {
       log_->error("%s-->can not find legal redis %s", fun, cluster);
       map< string, set<string> >::const_iterator e = errs.find(cluster);
@@ -989,7 +1003,10 @@ int RedisCtrl::gen_legal_redis(const std::map<std::string, std::string> &cfgs)
         return 2;
       } else {
         log_->warn("%s-->err redis use %s %s", fun, cluster, e->second.begin()->c_str());
-        legal_redis.insert(*e->second.begin());
+        vector<string> tmp;
+        tmp.push_back(*e->second.begin());
+        legal_redis.swap(tmp);
+        //legal_redis.insert(*e->second.begin());
       }
       continue;
     }
@@ -1036,7 +1053,7 @@ int RedisCtrl::gen_legal_redis(const std::map<std::string, std::string> &cfgs)
 
   }
 
-  if (legal_cmp(legal_redis)) return 5;
+  if (legal_cmp(cluster_legal_redis)) return 5;
 
   do_slaveof_cmd(cmds);
 
@@ -1044,12 +1061,27 @@ int RedisCtrl::gen_legal_redis(const std::map<std::string, std::string> &cfgs)
 
 }
 
-int RedisCtrl::legal_cmp(std::set<std::string> &legal_redis)
+int RedisCtrl::legal_cmp(map< string, vector<string> > &cluster_legal_redis)
 {
   const char *fun = "RedisCtrl::legal_cmp";
   set<string> bef_rds;
   int rv = get_nodes(zk_node_path_.c_str(), false, bef_rds);
   if (rv) return 1;
+
+  set<string> legal_redis;
+  for (map< string, vector<string> >::const_iterator it = cluster_legal_redis.begin();
+            it != cluster_legal_redis.end(); ++it) {
+    long idx = cut_idx(CLUSTER_PREFIX, it->first);
+    if (-1 == idx) return 1;
+
+    string cls = boost::lexical_cast<string>(idx);
+    for (vector<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
+      cls += ";";
+      cls += *jt;
+    }
+    legal_redis.insert(cls);
+  }
+
 
   set<string> nd_rms;
   for (set<string>::const_iterator it = bef_rds.begin(); it != bef_rds.end(); ++it) {
@@ -1095,19 +1127,27 @@ void RedisCtrl::do_slaveof_cmd(const std::map<std::string, std::string> &cmds, i
     uint64_t addr;
     string err;
     int port;
+    string sport;
     string ip;
     if (!str_ipv4_int64(it->first, addr, err)) {
       log_->error("%s-->error addr:%s err:%s", fun, it->first.c_str(), err.c_str());
 
     } else {
-      if (!str_ipv4(it->second, ip, port, err)) {
-        log_->error("%s-->config err:%s", fun, it->second.c_str());
-        
+      if (it->second == "NO:ONE") {
+        ip = "NO";
+        sport = "ONE";
       } else {
+        if (!str_ipv4(it->second, ip, port, err)) {
+          log_->error("%s-->config addr:%s err:%s", fun, it->second.c_str(), err.c_str());
+        } else {
+          sport = boost::lexical_cast<string>(port);
+        }
+      }
+      if (!sport.empty()) {
         vector<string> cs;
         cs.push_back("SLAVEOF");
         cs.push_back(ip);
-        cs.push_back(boost::lexical_cast<string>(port));
+        cs.push_back(sport);
         addr_cmd[addr] = cs;
       }
 

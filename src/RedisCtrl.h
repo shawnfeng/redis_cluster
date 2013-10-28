@@ -67,7 +67,7 @@ class RedisCtrl {
                   std::vector< std::pair<std::string, std::string> > &seqs);
   int gen_legal_redis(const std::map<std::string, std::string> &cfgs);
   void do_slaveof_cmd(const std::map<std::string, std::string> &cmds, int try_times = 3);
-  int legal_cmp(std::set<std::string> &legal_redis);
+  int legal_cmp(std::map< std::string, std::vector<std::string> > &cluster_legal_redis);
 
  public:
 

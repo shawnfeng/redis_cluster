@@ -60,6 +60,8 @@ class LogicCore {
   void from_sublayer(const std::string &sublayer_index, const std::string &pro);
   void from_sublayer_synok(long uid, int cli_tp, long conn, const std::string &sublayer_index, const std::map<std::string, std::string> &data);
 
+  //  int timeout_rm(int timeout, int stamp, int count);
+
   void from_toplayer();
 
 

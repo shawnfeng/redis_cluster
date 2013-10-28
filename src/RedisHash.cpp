@@ -1,3 +1,6 @@
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include "city.h"
 
 #include "RedisHash.h"
@@ -40,6 +43,40 @@ static void redis_node_wc(zhandle_t *zh, int type, int state, const char *path, 
 
 }
 
+static int path_split(const char *path, int &cls, vector< pair<string, int> > &sp, string &err)
+{
+  vector<string> tmp;
+  boost::algorithm::split(tmp, path, boost::algorithm::is_any_of(";"));
+
+  if (tmp.size() < 2) {
+    err = "error path size";
+    return 1;
+  }
+
+  try {
+    cls = boost::lexical_cast<int>(tmp.at(0));
+  } catch(std::exception& e) {
+    err = "error cluster index";
+    return 2;
+  }
+
+  for (size_t i = 1; i < tmp.size(); ++i) {
+    string ip;
+    int port;
+
+    if (!str_ipv4(tmp.at(i), ip, port, err)) {
+      err = "addr format error";
+      return 3;
+    } else {
+      sp.push_back(pair<string, int>(ip, port));
+    }
+
+  }
+
+  return 0;
+
+}
+
 
 static void redis_node_cb(int rc, const struct String_vector *strings, const void *data)
 {
@@ -68,19 +105,21 @@ static void redis_node_cb(int rc, const struct String_vector *strings, const voi
 	} else {
 
 		char **dp = strings->data;
-		vector< pair<string, int> > ends;
+		map< int, vector< pair<string, int> > > ends;
+
 		for (int i = 0; i < strings->count; ++i) {
 			char *chd = *dp++;
 			log->info("%s-->%s/%s", fun, ctx->path.c_str(), chd);
-			string ip;
-			int port;
+
 			string err;
-			if (!str_ipv4(chd, ip, port, err)) {
-				log->error("%s-->child %s format error", fun, chd);
-				return;
-			} else {
-				ends.push_back(pair<string, int>(ip, port));
-			}
+      int cls;
+      vector< pair<string, int> > vrds;
+      if (path_split(chd, cls, vrds, err)) {
+        log->error("%s-->child %s format error: %s", fun, chd, err.c_str());
+        return;
+      }
+      ends[cls] = vrds;
+
 		}
 
 		rh->update_ends(ends);
@@ -117,47 +156,115 @@ int RedisHash::start()
 	return 0;
 }
 
-void RedisHash::update_ends(const vector< pair<string, int> > &ends)
+static bool sort_cluster_fun(const pair< int, vector<uint64_t> > &a, const pair< int, vector<uint64_t> > &b)
 {
+  return a.second < b.second;
+}
+
+
+void RedisHash::update_ends(const map< int, vector< pair<string, int> > > &ends)
+{
+
 	const char *fun = "RedisHash::update_ends";
 	log_->info("%s-->size:%lu", fun, ends.size());
 
-	set<uint64_t> addrs;
-	for (vector< pair<string, int> >::const_iterator it = ends.begin();
+  typedef map< int, vector< pair<string, int> > > addrm_t;
+
+
+  map< int, vector<uint64_t> > maddrs;
+	for (addrm_t::const_iterator it = ends.begin();
 		     it != ends.end();
 		     ++it) {
+    vector<uint64_t> &addrs = maddrs.insert(
+                                            pair< int, vector<uint64_t> >(it->first, vector<uint64_t>())
+                                              ).first->second;
 
-		uint64_t addr = ipv4_int64(it->first.c_str(), it->second);
-		log_->info("%s-->ends:%s:%d addr:%lu", fun, it->first.c_str(), it->second, addr);
-		addrs.insert(addr);
+    for (vector< pair<string, int> >::const_iterator jt = it->second.begin();
+         jt != it->second.end(); ++jt) {
+      uint64_t addr = ipv4_int64(jt->first.c_str(), jt->second);
+      log_->info("%s-->cluster%d ends:%s:%d addr:%lu", fun, it->first, jt->first.c_str(), jt->second, addr);
+      addrs.push_back(addr);
+    }
+
 	}
 
+
 	boost::unique_lock< boost::shared_mutex > lock(smux_);
-	addrs_.swap(addrs);
+	addrs_.swap(maddrs);
   addrs_v_.clear();
   addrs_v_.assign(addrs_.begin(), addrs_.end());
+  sort(addrs_v_.begin(), addrs_v_.end(), sort_cluster_fun);
+
 }
 
-void RedisHash::redis_all(std::set<uint64_t> &addrs)
+void RedisHash::redis_all(map<int, uint64_t> &addrs)
 {
+  const char *fun = "RedisHash::redis_all";
 	boost::shared_lock< boost::shared_mutex > lock(smux_);
-  addrs = addrs_;
+  //  addrs = addrs_;
+  typedef vector<
+    std::pair< int, std::vector<uint64_t> >
+    > addrv_t;
+  for (addrv_t::const_iterator it = addrs_v_.begin(); it != addrs_v_.end(); ++it) {
+    if (!it->second.empty()) {
+      addrs[it->first] = it->second[0];
+    } else {
+      log_->error("%s-->redis addrs emtpy!", fun);
+    }
+  }
 }
 
-uint64_t RedisHash::redis_addr(const std::string &key)
+uint64_t RedisHash::redis_addr_slave_first(const std::string &key)
 {
-	const char *fun = "RedisHash::hash";
-
+	const char *fun = "redis_addr_slave_first";
 	boost::shared_lock< boost::shared_mutex > lock(smux_);
   if (addrs_.empty() || addrs_v_.empty()) {
-    log_->error("%s-->redis addrs emtpy!", fun);
+    log_->error("%s-->redis cluster emtpy!", fun);
     return 0;
   }
 
   uint64_t tmp = CityHash64(key.c_str(), key.size());
   log_->trace("%s-->hash:%s city64:%lu", fun, key.c_str(), tmp);
 
-  tmp = addrs_v_.at(tmp % addrs_v_.size());
+  const vector<uint64_t> &rds = addrs_v_.at(tmp % addrs_v_.size()).second;
+  if (rds.empty()) {
+    log_->error("%s-->redis addrs emtpy!", fun);
+    return 0;
+
+  }
+
+  int cn_sv = (int)rds.size()-1;
+  int idx = 0;
+  if (cn_sv > 0) {
+    idx = rand() % cn_sv + 1;
+  }
+
+  tmp = rds.at(idx);
+  return tmp;
+
+}
+
+uint64_t RedisHash::redis_addr_master(const std::string &key)
+{
+	const char *fun = "redis_addr_master";
+
+	boost::shared_lock< boost::shared_mutex > lock(smux_);
+  if (addrs_.empty() || addrs_v_.empty()) {
+    log_->error("%s-->redis cluster emtpy!", fun);
+    return 0;
+  }
+
+  uint64_t tmp = CityHash64(key.c_str(), key.size());
+  log_->trace("%s-->hash:%s city64:%lu", fun, key.c_str(), tmp);
+
+  const vector<uint64_t> &rds = addrs_v_.at(tmp % addrs_v_.size()).second;
+  if (rds.empty()) {
+    log_->error("%s-->redis addrs emtpy!", fun);
+    return 0;
+
+  }
+
+  tmp = rds.at(0);
 
   return tmp;
 }

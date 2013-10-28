@@ -102,7 +102,7 @@ void OnlineCtrl::single_uid_commend(
                                     )
 {
 
-  uint64_t rd_addr = rh_.redis_addr(suid);
+  uint64_t rd_addr = rh_.redis_addr_master(suid);
   if (!rd_addr) {
     log_.error("%s-->error hash uid:%s", fun, suid.c_str());
     return;
@@ -353,7 +353,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
        it != uids.end(); ++it) {
     long uid = *it;
     string suid = boost::lexical_cast<string>(uid);
-    uint64_t rd_addr = rh_.redis_addr(suid);
+    uint64_t rd_addr = rh_.redis_addr_slave_first(suid);
     if (!rd_addr) {
       log_.error("%s-->acotor:%s error hash uid:%s", fun, sactor.c_str(), suid.c_str());
       continue;
@@ -416,13 +416,13 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count)
   TimeUse tu;
   const char *fun = "OnlineCtrl::timeout_rm";
 
-  set<uint64_t> all_redis;
+  map<int, uint64_t> all_redis;
   rh_.redis_all(all_redis);
   const script_t &script = s_timeout_rm_;
   map< uint64_t, vector<string> > addr_cmd;
 
-  for (set<uint64_t>::const_iterator it = all_redis.begin(); it != all_redis.end(); ++it) {
-    vector<string> &args = addr_cmd.insert(pair< uint64_t, vector<string> >(*it, vector<string>())).first->second;    
+  for (map<int, uint64_t>::const_iterator it = all_redis.begin(); it != all_redis.end(); ++it) {
+    vector<string> &args = addr_cmd.insert(pair< uint64_t, vector<string> >(it->second, vector<string>())).first->second;    
 
     args.push_back("EVALSHA");
     args.push_back(script.sha1);
