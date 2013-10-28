@@ -32,8 +32,14 @@ int hook_fin(int timeout, long uid, const proto_fin &proto)
   return g_oc.fin(timeout, uid, proto);
 }
 
+int hook_timeout_rm(int timeout, int stamp, int count)
+{
+  return g_oc.timeout_rm(timeout, stamp, count);
+}
+
+
 //int hook_upidx_fn(int timeout, long uid, const proto_heart &proto);
-LogicCore g_lc(&g_log, hook_syn, hook_fin, NULL);
+LogicCore g_lc(&g_log, hook_syn, hook_fin, NULL, hook_timeout_rm);
 
 void syn_test()
 {

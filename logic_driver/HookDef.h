@@ -90,6 +90,7 @@ struct proto_ack {
 typedef int (*hook_syn_fn)(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
 typedef int (*hook_fin_fn)(int timeout, long uid, const proto_fin &proto);
 typedef int (*hook_upidx_fn)(int timeout, long uid, const proto_heart &proto);
+typedef int (*hook_timeout_rm_fn)(int timeout, int stamp, int count);
 
 
 #endif

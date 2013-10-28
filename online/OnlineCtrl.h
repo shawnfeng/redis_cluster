@@ -58,7 +58,7 @@ class OnlineCtrl {
  int syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
  int fin(int timeout, long uid, const proto_fin &proto);
  int upidx(int timeout, long uid, const proto_heart &proto);
-
+ int timeout_rm(int timeout, int stamp, int count);
  // void msg(int timeout, long uid, const proto_msg &proto);
  //--------bussiness level interface--------------------
  // ...
@@ -76,7 +76,7 @@ class OnlineCtrl {
                  std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions
                  );
 
-  int timeout_rm(int timeout, int stamp, int count);
+
 
 };
 

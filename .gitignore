@@ -3,3 +3,4 @@
 online/test_online
 online/test_ctrl
 src/libredis_client.a
+logic_driver/liblogic_driver.a

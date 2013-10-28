@@ -14,16 +14,20 @@ class LogicCore {
   hook_syn_fn syn_fn_;
   hook_fin_fn fin_fn_;
   hook_upidx_fn upidx_fn_;
-
+  hook_timeout_rm_fn timeout_rm_fn_;
  public:
  LogicCore(LogOut *log,
 
            hook_syn_fn syn,
            hook_fin_fn fin,
-           hook_upidx_fn upidx
+           hook_upidx_fn upidx,
+           hook_timeout_rm_fn timeout_rm
            ) :
   log_(log),
-    syn_fn_(syn), fin_fn_(fin), upidx_fn_(upidx)
+    syn_fn_(syn),
+    fin_fn_(fin),
+    upidx_fn_(upidx),
+    timeout_rm_fn_(timeout_rm)
   {
 
   }
