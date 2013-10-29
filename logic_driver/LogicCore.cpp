@@ -5,12 +5,6 @@
 
 using namespace std;
 
-static const char *stream_anlys(const char *p, void *data, int len)
-{
-  // 暂时不考虑网络字节序问题
-  memcpy(data, p, len);
-  return p + len;
-}
 
 void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
 {
@@ -21,16 +15,11 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
   }
 
 
-
-  int head_len = 0;
-  long conn_idx = 0;
-  int pro_tp = 0;
-
   const char *p = pro.c_str();
 
-  p = stream_anlys(p, &head_len, PROTO_LEN_HEAD);
-  p = stream_anlys(p, &conn_idx, PROTO_LEN_CONN);
-  p = stream_anlys(p, &pro_tp, PROTO_LEN_TYPE);
+  int head_len = stream_ltt_bit32(&p, PROTO_LEN_HEAD);
+  long conn_idx = stream_ltt_bit64(&p, PROTO_LEN_CONN);
+  int pro_tp = stream_ltt_bit32(&p, PROTO_LEN_TYPE);
 
   log_->info("%s->head:%d conn:%lu tp:%d", fun, head_len, conn_idx, pro_tp);
   if (PROTO_TYPE_FIN == pro_tp) {
@@ -38,12 +27,9 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
       log_->info("%s->error fin head:%d conn:%lu tp:%d", fun, head_len, conn_idx, pro_tp);
     }
 
-    int sendidx = 0;
-    int recvidx = 0;
-    long uid = 0;
-    p = stream_anlys(p, &sendidx, PROTO_LEN_SENDIDX);
-    p = stream_anlys(p, &recvidx, PROTO_LEN_RECVIDX);
-    p = stream_anlys(p, &uid, PROTO_LEN_UID);
+    int sendidx = stream_ltt_bit32(&p, PROTO_LEN_SENDIDX);
+    int recvidx = stream_ltt_bit32(&p, PROTO_LEN_RECVIDX);
+    long uid = stream_ltt_bit64(&p, PROTO_LEN_UID);
 
     proto_fin pr;
     pr.head.logic_conn = conn_idx;

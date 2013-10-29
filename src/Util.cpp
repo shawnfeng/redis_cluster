@@ -101,3 +101,60 @@ void LogOut::log_error(const char *log)
 	printf("[E]:[%ld]:%s\n", syscall(SYS_gettid), log);
 }
 
+
+// -----cpu order----
+
+
+uint16_t stream_ltt_bit16(const char **p, int sz)
+{
+  uint16_t n = 0;
+  memcpy(&n, *p, sz);
+  n = LITTLE_ENDIAN_CHANGE(n, 16);
+  *p += sz;
+  return n;
+
+}
+
+uint32_t stream_ltt_bit32(const char **p, int sz)
+{
+  uint32_t n = 0;
+  memcpy(&n, *p, sz);
+  n = LITTLE_ENDIAN_CHANGE(n, 32);
+  *p += sz;
+  return n;
+
+}
+
+uint64_t stream_ltt_bit64(const char **p, int sz)
+{
+  uint64_t n = 0;
+  memcpy(&n, *p, sz);
+  n = LITTLE_ENDIAN_CHANGE(n, 64);
+  *p += sz;
+  return n;
+
+}
+
+char *bit16_ltt_stream(uint16_t n, char *p, int sz)
+{
+  n = LITTLE_ENDIAN_CHANGE(n, 16);
+  memcpy(p, &n, sz);
+  return p + sz;
+}
+
+char *bit32_ltt_stream(uint32_t n, char *p, int sz)
+{
+  n = LITTLE_ENDIAN_CHANGE(n, 32);
+  memcpy(p, &n, sz);
+  return p + sz;
+}
+
+
+char *bit64_ltt_stream(uint64_t n, char *p, int sz)
+{
+  n = LITTLE_ENDIAN_CHANGE(n, 64);
+  memcpy(p, &n, sz);
+  return p + sz;
+}
+
+

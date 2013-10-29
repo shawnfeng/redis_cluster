@@ -98,6 +98,27 @@ class TimeUse {
   
 };
 
+#if BYTE_ORDER == BIG_ENDIAN
+#define LITTLE_ENDIAN_CHANGE(N, SIZE) __bswap_##SIZE(N)
+#elif BYTE_ORDER == LITTLE_ENDIAN
+#define LITTLE_ENDIAN_CHANGE(N, SIZE) N
+#else
+# error "What kind of system is this?"
+#endif
 
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define BIG_ENDIAN_CHANGE(N, SIZE) __bswap_##SIZE(N)
+#elif BYTE_ORDER == BIG_ENDIAN
+#define BIG_ENDIAN_CHANGE(N, SIZE) N
+#else
+# error "What kind of system is this?"
+#endif
+uint16_t stream_ltt_bit16(const char **p, int sz);
+uint32_t stream_ltt_bit32(const char **p, int sz);
+uint64_t stream_ltt_bit64(const char **p, int sz);
+
+char *bit16_ltt_stream(uint16_t n, char *p, int sz);
+char *bit32_ltt_stream(uint32_t n, char *p, int sz);
+char *bit64_ltt_stream(uint64_t n, char *p, int sz);
 
 #endif

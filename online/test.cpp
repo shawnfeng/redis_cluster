@@ -84,7 +84,7 @@ void syn_test()
 void fin_test()
 {
   int head_len = LogicCore::PROTO_LEN_FIN;
-  size_t conn_idx = 2342134;
+  long conn_idx = 2342134;
   int pro_tp = LogicCore::PROTO_TYPE_FIN;
   int sendidx = 1;
   int recvidx = 0;
@@ -92,24 +92,13 @@ void fin_test()
 
   char buff[LogicCore::PROTO_LEN_FIN];
   char *p = buff;
-  memcpy(p, &head_len, LogicCore::PROTO_LEN_HEAD);
-  p += LogicCore::PROTO_LEN_HEAD;
 
-  memcpy(p, &conn_idx, LogicCore::PROTO_LEN_CONN);
-  p += LogicCore::PROTO_LEN_CONN;
-
-  memcpy(p, &pro_tp, LogicCore::PROTO_LEN_TYPE);
-  p += LogicCore::PROTO_LEN_TYPE;
-
-  memcpy(p, &sendidx, LogicCore::PROTO_LEN_SENDIDX);
-  p += LogicCore::PROTO_LEN_SENDIDX;
-
-  memcpy(p, &recvidx, LogicCore::PROTO_LEN_RECVIDX);
-  p += LogicCore::PROTO_LEN_RECVIDX;
-
-  memcpy(p, &uid, LogicCore::PROTO_LEN_UID);
-  p += LogicCore::PROTO_LEN_UID;
-
+  p = bit32_ltt_stream(head_len, p, LogicCore::PROTO_LEN_HEAD);
+  p = bit64_ltt_stream(conn_idx, p, LogicCore::PROTO_LEN_CONN);
+  p = bit32_ltt_stream(pro_tp, p, LogicCore::PROTO_LEN_TYPE);
+  p = bit32_ltt_stream(sendidx, p, LogicCore::PROTO_LEN_SENDIDX);
+  p = bit32_ltt_stream(recvidx, p, LogicCore::PROTO_LEN_RECVIDX);
+  p = bit64_ltt_stream(uid, p, LogicCore::PROTO_LEN_UID);
 
   string sublayer_index = "adfasd/adfw";
   string pro;
@@ -122,8 +111,8 @@ void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     //syn_test();
-    //fin_test();
-    get_multi_test();
+    fin_test();
+    //get_multi_test();
     sleep(1);
   }
 
