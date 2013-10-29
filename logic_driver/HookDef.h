@@ -37,7 +37,7 @@ struct proto_syn {
   std::string sublayer_index;
 
   int cli_type;
-  //  std::string cli_ver;
+  std::string cli_ver;
   std::vector<std::string> data;
 
 proto_syn() : expire(0), cli_type(-1) {}
@@ -49,7 +49,7 @@ proto_syn() : expire(0), cli_type(-1) {}
     d.push_back(sublayer_index);
 
     d.push_back(boost::lexical_cast<std::string>(cli_type));
-    //    d.push_back(cli_ver);
+    d.push_back(cli_ver);
     return (int)d.size();
   }
 

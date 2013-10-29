@@ -46,7 +46,7 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
 
 }
 
-void LogicCore::from_sublayer_synok(long uid, int cli_tp, long conn, const string &sublayer_index, const map<string, string> &data)
+void LogicCore::from_sublayer_synok(long uid, long conn, int cli_tp, const string &ver, const string &sublayer_index, const map<string, string> &data)
 {
   const char *fun = "LogicCore::from_sublayer_synok";
   proto_syn p;
@@ -56,6 +56,7 @@ void LogicCore::from_sublayer_synok(long uid, int cli_tp, long conn, const strin
   p.expire = time(NULL) + 100; // 过期时间先被写死了！！！
   p.sublayer_index = sublayer_index;
   p.cli_type = cli_tp;
+  p.cli_ver = ver;
 
   vector<string> &kvs = p.data;
 

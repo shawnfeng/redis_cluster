@@ -75,9 +75,8 @@ void syn_test()
   size_t conn = 2342134;
   string sublayer_index = "adfasd/adfw";
   map<string, string> kvs;
-  kvs["VER"] = "32.23";
   kvs["FUCK"] = "beauty";
-  g_lc.from_sublayer_synok(uid, cli_tp, conn, sublayer_index, kvs);
+  g_lc.from_sublayer_synok(uid, conn, cli_tp, "32.33", sublayer_index, kvs);
 
 }
 
