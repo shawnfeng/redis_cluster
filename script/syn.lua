@@ -10,10 +10,10 @@ local lc = KEYS[2]
 local sid = KEYS[3]
 -- recv index
 local rid = KEYS[4]
--- expire stamp
-local st = KEYS[5]
 -- gate locate
-local gate = KEYS[6]
+local gate = KEYS[5]
+-- expire stamp
+local st = KEYS[6]
 -- client type
 local ct = KEYS[7]
 -- client version

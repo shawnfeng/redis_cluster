@@ -13,22 +13,26 @@ class LogicCore {
 
   hook_syn_fn syn_fn_;
   hook_fin_fn fin_fn_;
+  hook_fin_delay_fn fin_delay_fn_;
   hook_upidx_fn upidx_fn_;
   hook_timeout_rm_fn timeout_rm_fn_;
 
  private:
   void check_timeout();
+  int expire_stamp(int st, int cli_tp);
  public:
  LogicCore(LogOut *log,
 
            hook_syn_fn syn,
            hook_fin_fn fin,
+           hook_fin_delay_fn fin_delay,
            hook_upidx_fn upidx,
            hook_timeout_rm_fn timeout_rm
            ) :
   log_(log),
     syn_fn_(syn),
     fin_fn_(fin),
+    fin_delay_fn_(fin_delay),
     upidx_fn_(upidx),
     timeout_rm_fn_(timeout_rm)
   {
@@ -38,11 +42,13 @@ class LogicCore {
   enum {
     TIMEOUT_SYN = 100,
     TIMEOUT_FIN = 100,
+    TIMEOUT_FIN_DELAY = 100,
   };
 
   enum {
     PROTO_TYPE_SYN = 1,
     PROTO_TYPE_FIN = 2,
+    PROTO_TYPE_FIN_DELAY = 3,
   };
 
   enum {
@@ -53,9 +59,11 @@ class LogicCore {
     PROTO_LEN_SENDIDX = 4,
     PROTO_LEN_RECVIDX = 4,
     PROTO_LEN_UID = 8,
+    PROTO_LEN_STAMP = 4,
 
     PROTO_LEN_GLOBAL_HEAD = PROTO_LEN_HEAD + PROTO_LEN_CONN + PROTO_LEN_TYPE,
     PROTO_LEN_FIN = PROTO_LEN_GLOBAL_HEAD + PROTO_LEN_SENDIDX + PROTO_LEN_RECVIDX + PROTO_LEN_UID,
+    PROTO_LEN_FIN_DELAY = PROTO_LEN_GLOBAL_HEAD + PROTO_LEN_SENDIDX + PROTO_LEN_RECVIDX + PROTO_LEN_UID + PROTO_LEN_STAMP,
   };
 
 

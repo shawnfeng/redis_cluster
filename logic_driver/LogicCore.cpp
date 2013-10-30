@@ -20,6 +20,7 @@ void LogicCore::check_timeout()
 void LogicCore::start()
 {
   boost::thread td(boost::bind(&LogicCore::check_timeout, this));
+  td.detach();
 }
 
 void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
@@ -38,6 +39,9 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
   int pro_tp = stream_ltt_bit32(&p, PROTO_LEN_TYPE);
 
   log_->info("%s->head:%d conn:%lu tp:%d", fun, head_len, conn_idx, pro_tp);
+
+
+  // 以下各个协议解析代码需要结构优化
   if (PROTO_TYPE_FIN == pro_tp) {
     if (pro.size() != PROTO_LEN_FIN) {
       log_->info("%s->error fin head:%d conn:%lu tp:%d", fun, head_len, conn_idx, pro_tp);
@@ -51,8 +55,32 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
     pr.head.logic_conn = conn_idx;
     pr.head.idx.send_idx = sendidx;
     pr.head.idx.recv_idx = recvidx;
+    pr.head.sublayer_index = sublayer_index;
 
     int rv = fin_fn_(TIMEOUT_FIN, uid, pr);
+    if (rv) {
+      log_->error("%s-->uid:%ld rv:%d head:%d conn:%lu tp:%d",
+                  fun, uid, rv, head_len, conn_idx, pro_tp);
+    }
+
+  } else if (PROTO_TYPE_FIN_DELAY == pro_tp) {
+    if (pro.size() != PROTO_LEN_FIN_DELAY) {
+      log_->info("%s->error fin_delay head:%d conn:%lu tp:%d", fun, head_len, conn_idx, pro_tp);
+    }
+
+    int sendidx = stream_ltt_bit32(&p, PROTO_LEN_SENDIDX);
+    int recvidx = stream_ltt_bit32(&p, PROTO_LEN_RECVIDX);
+    long uid = stream_ltt_bit64(&p, PROTO_LEN_UID);
+    int expire = stream_ltt_bit32(&p, PROTO_LEN_STAMP);
+
+    proto_fin_delay pr;
+    pr.head.logic_conn = conn_idx;
+    pr.head.idx.send_idx = sendidx;
+    pr.head.idx.recv_idx = recvidx;
+    pr.head.sublayer_index = sublayer_index;
+    pr.expire = expire;
+
+    int rv = fin_delay_fn_(TIMEOUT_FIN_DELAY, uid, pr);
     if (rv) {
       log_->error("%s-->uid:%ld rv:%d head:%d conn:%lu tp:%d",
                   fun, uid, rv, head_len, conn_idx, pro_tp);
@@ -62,15 +90,36 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
 
 }
 
+int LogicCore::expire_stamp(int st, int cli_tp)
+{
+  
+  switch (cli_tp) {
+
+  case 0:
+  case 1:
+    return st + 60 * 30;
+
+  case 200:
+  default:
+    return st + 60 * 10;
+
+  }
+
+}
+
+
 void LogicCore::from_sublayer_synok(long uid, long conn, int cli_tp, const string &ver, const string &sublayer_index, const map<string, string> &data)
 {
   const char *fun = "LogicCore::from_sublayer_synok";
   proto_syn p;
   p.head.logic_conn = conn;
   p.head.idx.send_idx = 1;
+  p.head.sublayer_index = sublayer_index;
 
-  p.expire = time(NULL) + 100; // 过期时间先被写死了！！！
-  p.sublayer_index = sublayer_index;
+  int ns = time(NULL);
+
+  p.expire = expire_stamp(ns, cli_tp);
+
   p.cli_type = cli_tp;
   p.cli_ver = ver;
 

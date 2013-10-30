@@ -31,6 +31,7 @@ class OnlineCtrl {
 
   script_t s_syn_;
   script_t s_fin_;
+  script_t s_fin_delay_;
 
  private:
   void single_uid_commend(const char *fun,
@@ -57,7 +58,8 @@ class OnlineCtrl {
  //-------------------logic connection level interface-----------------------
  int syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
  int fin(int timeout, long uid, const proto_fin &proto);
- int upidx(int timeout, long uid, const proto_heart &proto);
+ int fin_delay(int timeout, long uid, const proto_fin_delay &proto);
+ int upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx);
  int timeout_rm(int timeout, int stamp, int count);
  // void msg(int timeout, long uid, const proto_msg &proto);
  //--------bussiness level interface--------------------

@@ -16,6 +16,7 @@ static const char *get_timeout_ope = "/timeout_rm.lua";
 
 static const char *syn_ope = "/syn.lua";
 static const char *fin_ope = "/fin.lua";
+static const char *fin_delay_ope = "/fin_delay.lua";
 
 
 static bool check_sha1(const char *path, string &data, string &sha1)
@@ -86,6 +87,7 @@ OnlineCtrl::OnlineCtrl(void (*log_t)(const char *),
 
   load_script(sp_ + syn_ope, s_syn_);
   load_script(sp_ + fin_ope, s_fin_);
+  load_script(sp_ + fin_delay_ope, s_fin_delay_);
 
 
 
@@ -518,6 +520,49 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
   return 0;
 }
 
+int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
+{
+  TimeUse tu;
+  const char *fun = "OnlineCtrl::fin_delay";
+
+
+  string suid = boost::lexical_cast<string>(uid);
+
+  const script_t &script = s_fin_delay_;
+  
+  vector<string> args;
+  args.push_back("EVALSHA");
+  args.push_back(script.sha1);
+  args.push_back("KEY_SUM");
+
+  args.push_back(suid);
+  int key_sum = proto.keys(args);
+  // update key sum
+  args[2] = boost::lexical_cast<string>(key_sum - 3);
+
+
+	RedisRvs rv;  
+  single_uid_commend(fun, timeout, suid, args, script.data, rv);
+
+  if (rv.size() != 1) {
+    log_.error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
+    return 2;
+  }
+
+  RedisRvs::const_iterator it = rv.begin();
+  const RedisRv &tmp = it->second;
+  //  tmp.dump(&log_, fun, 2);
+  if (tmp.type != REDIS_REPLY_STATUS) {
+    tmp.dump(&log_, fun, 2);
+    log_.warn("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
+  }
+
+
+	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+
+  return 0;
+
+}
 
 int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto)
 {
@@ -576,4 +621,9 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto)
   return 0;
 
 
+}
+
+int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx)
+{
+  return 0;
 }

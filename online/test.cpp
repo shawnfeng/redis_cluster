@@ -32,6 +32,12 @@ int hook_fin(int timeout, long uid, const proto_fin &proto)
   return g_oc.fin(timeout, uid, proto);
 }
 
+int hook_fin_delay(int timeout, long uid, const proto_fin_delay &proto)
+{
+  return g_oc.fin_delay(timeout, uid, proto);
+}
+
+
 int hook_timeout_rm(int timeout, int stamp, int count)
 {
   return g_oc.timeout_rm(timeout, stamp, count);
@@ -39,7 +45,7 @@ int hook_timeout_rm(int timeout, int stamp, int count)
 
 
 //int hook_upidx_fn(int timeout, long uid, const proto_heart &proto);
-LogicCore g_lc(&g_log, hook_syn, hook_fin, NULL, hook_timeout_rm);
+LogicCore g_lc(&g_log, hook_syn, hook_fin, hook_fin_delay, NULL, hook_timeout_rm);
 
 void get_multi_test()
 {
@@ -106,11 +112,42 @@ void fin_test()
 
 }
 
+void fin_delay_test()
+{
+  int head_len = LogicCore::PROTO_LEN_FIN_DELAY;
+  long conn_idx = 2342134;
+  int pro_tp = LogicCore::PROTO_TYPE_FIN_DELAY;
+  int sendidx = 1;
+  int recvidx = 0;
+  long uid = 10;
+
+  int delay = time(NULL) + 10;
+
+  char buff[LogicCore::PROTO_LEN_FIN_DELAY];
+  char *p = buff;
+
+  p = bit32_ltt_stream(head_len, p, LogicCore::PROTO_LEN_HEAD);
+  p = bit64_ltt_stream(conn_idx, p, LogicCore::PROTO_LEN_CONN);
+  p = bit32_ltt_stream(pro_tp, p, LogicCore::PROTO_LEN_TYPE);
+  p = bit32_ltt_stream(sendidx, p, LogicCore::PROTO_LEN_SENDIDX);
+  p = bit32_ltt_stream(recvidx, p, LogicCore::PROTO_LEN_RECVIDX);
+  p = bit64_ltt_stream(uid, p, LogicCore::PROTO_LEN_UID);
+  p = bit32_ltt_stream(delay, p, LogicCore::PROTO_LEN_STAMP);
+
+  string sublayer_index = "adfasd/adfw";
+  string pro;
+  pro.assign(buff, LogicCore::PROTO_LEN_FIN_DELAY);
+  g_lc.from_sublayer(sublayer_index, pro);
+
+}
+
+
 void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
-    syn_test();
+    //syn_test();
     //fin_test();
+    fin_delay_test();
     //get_multi_test();
     sleep(1);
   }
@@ -239,7 +276,7 @@ int main (int argc, char **argv)
 		pthread_join(pids[i],NULL);
 	}
 
-  pause();
+  //  pause();
 
 
 	return 0;
