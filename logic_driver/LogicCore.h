@@ -15,6 +15,9 @@ class LogicCore {
   hook_fin_fn fin_fn_;
   hook_upidx_fn upidx_fn_;
   hook_timeout_rm_fn timeout_rm_fn_;
+
+ private:
+  void check_timeout();
  public:
  LogicCore(LogOut *log,
 
@@ -56,13 +59,13 @@ class LogicCore {
   };
 
 
+  void start();
+
   // interface
   void from_sublayer(const std::string &sublayer_index, const std::string &pro);
   void from_sublayer_synok(long uid, long conn, int cli_tp, const std::string &ver, const std::string &sublayer_index, const std::map<std::string, std::string> &data);
 
-  //  int timeout_rm(int timeout, int stamp, int count);
 
-  void from_toplayer();
 
 
 };

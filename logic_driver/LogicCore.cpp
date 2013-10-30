@@ -1,10 +1,26 @@
 #include <boost/lexical_cast.hpp>
+#include <boost/thread.hpp>
 
 #include "LogicCore.h"
 
 
 using namespace std;
 
+void LogicCore::check_timeout()
+{
+  const char *fun = "LogicCore::check_timeout";
+  for (;;) {
+    int cn = timeout_rm_fn_(300, time(NULL), -1);
+    log_->info("%s-->rm count %d", fun, cn);
+    sleep(1);
+  }
+}
+
+
+void LogicCore::start()
+{
+  boost::thread td(boost::bind(&LogicCore::check_timeout, this));
+}
 
 void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
 {

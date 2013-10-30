@@ -435,17 +435,26 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count)
   RedisRvs rv;
   re_.cmd(rv, "timeout_rm", addr_cmd, timeout, script.data, false);
 
+  int rm_count = 0;
   for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     uint64_t addr = it->first;
     const RedisRv &tmp = it->second;
     string saddr = fun + boost::lexical_cast<string>(addr);
-    tmp.dump(&log_, saddr.c_str(), 2);
+
+    if (tmp.type != REDIS_REPLY_INTEGER) {
+      tmp.dump(&log_, saddr.c_str(), 3);
+      log_.error("%s-->retrun timeoutrm invalid format addr:%lu err:%s", fun, addr, tmp.str.c_str());
+      continue;
+    } else {
+      rm_count += tmp.integer;
+    }
+
 
   }
 
 
-  log_.info("%s-->stamp:%d cn:%d tm:%lu", fun, stamp, count, tu.intv());
-  return 1;
+  log_.info("%s-->stamp:%d cn:%d tm:%lu rm_count:%d", fun, stamp, count, tu.intv(), rm_count);
+  return rm_count;
 }
 
 

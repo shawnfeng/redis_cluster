@@ -109,8 +109,8 @@ void fin_test()
 void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
-    //syn_test();
-    fin_test();
+    syn_test();
+    //fin_test();
     //get_multi_test();
     sleep(1);
   }
@@ -223,6 +223,8 @@ int main (int argc, char **argv)
 
   sleep(INIT_SLEEP);
 
+  g_lc.start();
+
 	pthread_t pids[THREAD_NUMS];
 	int pn = (int)(sizeof(pids)/sizeof(pids[0]));
 	for (int i = 0; i < pn; ++i) {
@@ -237,7 +239,7 @@ int main (int argc, char **argv)
 		pthread_join(pids[i],NULL);
 	}
 
-  //	pause();
+  pause();
 
 
 	return 0;
