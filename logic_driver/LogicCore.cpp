@@ -6,11 +6,39 @@
 
 using namespace std;
 
+int LogicCore::syn_fn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx)
+{
+  return syn_fn_ ? syn_fn_(timeout, uid, proto, idx) : 0;
+
+}
+
+int LogicCore::fin_fn(int timeout, long uid, const proto_fin &proto)
+{
+  return fin_fn_ ? fin_fn_(timeout, uid, proto) : 0;
+}
+
+
+int LogicCore::fin_delay_fn(int timeout, long uid, const proto_fin_delay &proto)
+{
+  return fin_delay_fn_ ? fin_delay_fn_(timeout, uid, proto) : 0;
+}
+
+int LogicCore::upidx_fn(int timeout, long uid, const proto_upidx &proto)
+{
+  return upidx_fn_ ? upidx_fn_(timeout, uid, proto) : 0;
+}
+
+int LogicCore::timeout_rm_fn(int timeout, int stamp, int count)
+{
+  return timeout_rm_fn_ ? timeout_rm_fn_(timeout, stamp, count) : 0;
+}
+
+
 void LogicCore::check_timeout()
 {
   const char *fun = "LogicCore::check_timeout";
   for (;;) {
-    int cn = timeout_rm_fn_(300, time(NULL), -1);
+    int cn = timeout_rm_fn(300, time(NULL), -1);
     log_->info("%s-->rm count %d", fun, cn);
     sleep(1);
   }
@@ -57,7 +85,7 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
     pr.head.idx.recv_idx = recvidx;
     pr.head.sublayer_index = sublayer_index;
 
-    int rv = fin_fn_(TIMEOUT_FIN, uid, pr);
+    int rv = fin_fn(TIMEOUT_FIN, uid, pr);
     if (rv) {
       log_->error("%s-->uid:%ld rv:%d head:%d conn:%lu tp:%d",
                   fun, uid, rv, head_len, conn_idx, pro_tp);
@@ -80,7 +108,7 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
     pr.head.sublayer_index = sublayer_index;
     pr.expire = expire;
 
-    int rv = fin_delay_fn_(TIMEOUT_FIN_DELAY, uid, pr);
+    int rv = fin_delay_fn(TIMEOUT_FIN_DELAY, uid, pr);
     if (rv) {
       log_->error("%s-->uid:%ld rv:%d head:%d conn:%lu tp:%d",
                   fun, uid, rv, head_len, conn_idx, pro_tp);
@@ -133,7 +161,7 @@ void LogicCore::from_sublayer_synok(long uid, long conn, int cli_tp, const strin
 
 
   proto_idx_pair ridx;
-  int rv = syn_fn_(TIMEOUT_SYN, uid, p, ridx);
+  int rv = syn_fn(TIMEOUT_SYN, uid, p, ridx);
 
   if (rv) {
     log_->error("%s-->%ld %d %s syn fail!", fun, uid, cli_tp, sublayer_index.c_str());

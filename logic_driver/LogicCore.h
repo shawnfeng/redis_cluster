@@ -20,6 +20,14 @@ class LogicCore {
  private:
   void check_timeout();
   int expire_stamp(int st, int cli_tp);
+
+  int syn_fn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
+  int fin_fn(int timeout, long uid, const proto_fin &proto);
+  int fin_delay_fn(int timeout, long uid, const proto_fin_delay &proto);
+  int upidx_fn(int timeout, long uid, const proto_upidx &proto);
+  int timeout_rm_fn(int timeout, int stamp, int count);
+
+
  public:
  LogicCore(LogOut *log,
 
