@@ -19,12 +19,12 @@ local klc = 'L.'..uid..'.'..lc
 local kc = 'TIMEOUT_CHECK'
 
 --local idp = redis.call('HMGET', klc, 'SID', 'RID')
-
+local ofl = redis.call('HGET', kuid, lc)
 redis.call('HDEL', kuid, lc)
 redis.call('DEL', klc)
 redis.call('ZREM', kc, klc)
 
-return {ok = "OK"}
+return ofl
 --return {tonumber(idp[1]), tonumber(idp[2])+1}
 
 

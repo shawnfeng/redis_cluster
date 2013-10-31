@@ -413,7 +413,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
 }
 
 
-int OnlineCtrl::timeout_rm(int timeout, int stamp, int count)
+int OnlineCtrl::timeout_rm(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs)
 {
   TimeUse tu;
   const char *fun = "OnlineCtrl::timeout_rm";
@@ -437,26 +437,36 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count)
   RedisRvs rv;
   re_.cmd(rv, "timeout_rm", addr_cmd, timeout, script.data, false);
 
-  int rm_count = 0;
+
   for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     uint64_t addr = it->first;
     const RedisRv &tmp = it->second;
     string saddr = fun + boost::lexical_cast<string>(addr);
 
-    if (tmp.type != REDIS_REPLY_INTEGER) {
+    if (tmp.type != REDIS_REPLY_ARRAY
+        || tmp.element.size() % 2 != 0
+          ) {
       tmp.dump(&log_, saddr.c_str(), 3);
       log_.error("%s-->retrun timeoutrm invalid format addr:%lu err:%s", fun, addr, tmp.str.c_str());
       continue;
     } else {
-      rm_count += tmp.integer;
+      const vector<RedisRv> &tmp_eles = tmp.element;
+      for (int i = 0; i < (int)tmp_eles.size(); i+=2) {
+        if (tmp_eles.at(i).type != REDIS_REPLY_INTEGER
+            || tmp_eles.at(i+1).type != REDIS_REPLY_STRING) {
+          tmp_eles.at(i).dump(&log_, saddr.c_str(), 3);
+          tmp_eles.at(i+1).dump(&log_, saddr.c_str(), 3);
+        } else {
+          rvs.push_back(pair<long, string>(tmp_eles.at(i).integer, tmp_eles.at(i+1).str));
+        }
+      }
     }
-
 
   }
 
 
-  log_.info("%s-->stamp:%d cn:%d tm:%lu rm_count:%d", fun, stamp, count, tu.intv(), rm_count);
-  return rm_count;
+  log_.info("%s-->stamp:%d cn:%d tm:%lu rm_count:%lu", fun, stamp, count, tu.intv(), rvs.size());
+  return 0;
 }
 
 
@@ -564,7 +574,7 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
 
 }
 
-int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto)
+int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &cli_info)
 {
   TimeUse tu;
   const char *fun = "OnlineCtrl::fin";
@@ -596,29 +606,21 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto)
   RedisRvs::const_iterator it = rv.begin();
   const RedisRv &tmp = it->second;
   //  tmp.dump(&log_, fun, 2);
-  if (tmp.type != REDIS_REPLY_STATUS) {
-    tmp.dump(&log_, fun, 3);
-    log_.error("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
+  int rvt = 0;
+  if (tmp.type != REDIS_REPLY_STRING && tmp.type != REDIS_REPLY_NIL) {
+    tmp.dump(&log_, fun, 2);
+    log_.warn("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
+    rvt = 2;
+  } else if (tmp.type == REDIS_REPLY_NIL) {
+    log_.warn("%s-->return actor:%ld nil", fun, uid);
+    rvt = 1;
+  } else {
+    cli_info = tmp.str;
   }
 
-
-
-  /*
-  if (tmp.type != REDIS_REPLY_ARRAY
-      || tmp.element.size() != 2
-      || tmp.element.at(0).type != REDIS_REPLY_INTEGER
-      || tmp.element.at(1).type != REDIS_REPLY_INTEGER
-      ) {
-    log_.error("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
-    return 3;
-  }
-
-  idx.send_idx = tmp.element.at(0).integer;
-  idx.recv_idx = tmp.element.at(1).integer;
-  */
 	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
 
-  return 0;
+  return rvt;
 
 
 }

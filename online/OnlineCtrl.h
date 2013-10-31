@@ -57,10 +57,10 @@ class OnlineCtrl {
 
  //-------------------logic connection level interface-----------------------
  int syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
- int fin(int timeout, long uid, const proto_fin &proto);
+ int fin(int timeout, long uid, const proto_fin &proto, std::string &cli_info);
  int fin_delay(int timeout, long uid, const proto_fin_delay &proto);
  int upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx);
- int timeout_rm(int timeout, int stamp, int count);
+ int timeout_rm(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs);
  // void msg(int timeout, long uid, const proto_msg &proto);
  //--------bussiness level interface--------------------
  // ...

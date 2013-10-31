@@ -12,9 +12,9 @@ int LogicCore::syn_fn(int timeout, long uid, const proto_syn &proto, proto_idx_p
 
 }
 
-int LogicCore::fin_fn(int timeout, long uid, const proto_fin &proto)
+int LogicCore::fin_fn(int timeout, long uid, const proto_fin &proto, std::string &cli_info)
 {
-  return fin_fn_ ? fin_fn_(timeout, uid, proto) : 0;
+  return fin_fn_ ? fin_fn_(timeout, uid, proto, cli_info) : 0;
 }
 
 
@@ -28,18 +28,39 @@ int LogicCore::upidx_fn(int timeout, long uid, const proto_upidx &proto)
   return upidx_fn_ ? upidx_fn_(timeout, uid, proto) : 0;
 }
 
-int LogicCore::timeout_rm_fn(int timeout, int stamp, int count)
+int LogicCore::timeout_rm_fn(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs)
 {
-  return timeout_rm_fn_ ? timeout_rm_fn_(timeout, stamp, count) : 0;
+  return timeout_rm_fn_ ? timeout_rm_fn_(timeout, stamp, count, rvs) : 0;
 }
+
+int LogicCore::offline_notify_fn(long uid, std::string &cli_info)
+{
+  return offline_notify_fn_ ? offline_notify_fn_(uid, cli_info) : 0;
+}
+
+int LogicCore::offline_notify_multi_fn(std::vector< std::pair<long, std::string> > &rvs)
+{
+  return offline_notify_multi_fn_ ? offline_notify_multi_fn_(rvs) : 0;
+}
+
 
 
 void LogicCore::check_timeout()
 {
   const char *fun = "LogicCore::check_timeout";
+  vector< pair<long, string> > rvs;
   for (;;) {
-    int cn = timeout_rm_fn(300, time(NULL), -1);
-    log_->info("%s-->rm count %d", fun, cn);
+    rvs.clear();
+    int rv = timeout_rm_fn(300, time(NULL), -1, rvs);
+    //    log_->debug("%s-->rv:%d sz:%lu", rv, rvs.size());
+    if (rv) {
+      log_->error("%s-->timeout rm rv %d", fun, rv);
+    } else {
+      rv = offline_notify_multi_fn(rvs);
+      if (rv) log_->error("%s-->offline_notify_multi_fn rv %d", fun, rv);
+    }
+
+    log_->info("%s-->rm count %lu", fun, rvs.size());
     sleep(1);
   }
 }
@@ -85,10 +106,17 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
     pr.head.idx.recv_idx = recvidx;
     pr.head.sublayer_index = sublayer_index;
 
-    int rv = fin_fn(TIMEOUT_FIN, uid, pr);
+    string cli_info;
+    int rv = fin_fn(TIMEOUT_FIN, uid, pr, cli_info);
     if (rv) {
-      log_->error("%s-->uid:%ld rv:%d head:%d conn:%lu tp:%d",
+      log_->warn("%s-->uid:%ld rv:%d head:%d conn:%lu tp:%d",
                   fun, uid, rv, head_len, conn_idx, pro_tp);
+    } else {
+      rv = offline_notify_fn(uid, cli_info);
+      if (rv) {
+        log_->error("%s-->offline_notify_fn uid:%ld rv:%d head:%d conn:%lu tp:%d",
+                    fun, uid, rv, head_len, conn_idx, pro_tp);
+      }
     }
 
   } else if (PROTO_TYPE_FIN_DELAY == pro_tp) {
@@ -126,6 +154,10 @@ int LogicCore::expire_stamp(int st, int cli_tp)
   case 0:
   case 1:
     return st + 60 * 30;
+
+  case 100000:
+    // use test
+    return st + 20;
 
   case 200:
   default:

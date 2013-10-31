@@ -27,9 +27,9 @@ int hook_syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx)
   return g_oc.syn(timeout, uid, proto, idx);
 }
 
-int hook_fin(int timeout, long uid, const proto_fin &proto)
+int hook_fin(int timeout, long uid, const proto_fin &proto, std::string &cli_info)
 {
-  return g_oc.fin(timeout, uid, proto);
+  return g_oc.fin(timeout, uid, proto, cli_info);
 }
 
 int hook_fin_delay(int timeout, long uid, const proto_fin_delay &proto)
@@ -38,14 +38,33 @@ int hook_fin_delay(int timeout, long uid, const proto_fin_delay &proto)
 }
 
 
-int hook_timeout_rm(int timeout, int stamp, int count)
+int hook_timeout_rm(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs)
 {
-  return g_oc.timeout_rm(timeout, stamp, count);
+  return g_oc.timeout_rm(timeout, stamp, count, rvs);
+}
+
+int hook_offline_notify(long uid, std::string &cli_info)
+{
+  g_log.info("hook_offline_notify-->uid:%ld cli:%s", uid, cli_info.c_str());
+  return 0;
+}
+
+int hook_offline_notify_multi(std::vector< std::pair<long, std::string> > &rvs)
+{
+  const char *fun = "hook_offline_notify_multi";
+  for (vector< pair<long, string> >::const_iterator it = rvs.begin();
+         it != rvs.end(); ++it) {
+         g_log.info("%s-->uid:%ld cli:%s", fun, it->first, it->second.c_str());
+       }
+         
+         return 0;
 }
 
 
+
 //int hook_upidx_fn(int timeout, long uid, const proto_heart &proto);
-LogicCore g_lc(&g_log, hook_syn, hook_fin, hook_fin_delay, NULL, hook_timeout_rm);
+  LogicCore g_lc(&g_log, hook_syn, hook_fin, hook_fin_delay, NULL, hook_timeout_rm,
+                 hook_offline_notify, hook_offline_notify_multi);
 
 void get_multi_test()
 {
@@ -77,11 +96,14 @@ void get_multi_test()
 void syn_test()
 {
   long uid = 10;
-  int cli_tp = 200;
-  size_t conn = 2342134;
+  int cli_tp = 100000;
+  long conn = 2342134;
   string sublayer_index = "adfasd/adfw";
   map<string, string> kvs;
   kvs["FUCK"] = "beauty";
+  g_lc.from_sublayer_synok(uid, conn, cli_tp, "32.33", sublayer_index, kvs);
+
+  conn = 2342135;
   g_lc.from_sublayer_synok(uid, conn, cli_tp, "32.33", sublayer_index, kvs);
 
 }
@@ -146,8 +168,8 @@ void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     //syn_test();
-    //fin_test();
-    fin_delay_test();
+    fin_test();
+    //fin_delay_test();
     //get_multi_test();
     sleep(1);
   }
@@ -224,7 +246,7 @@ void *thread_cb(void* args)
     kvs.push_back(boost::lexical_cast<string>(uid));
     g_log.info("******%ld==============================", uid);
 
-    //    oc->online(CALL_TIMEOUT, uid, session, 200, kvs);
+    //    oc->online(CALL_TIMEOUT, uid, session, 100000, kvs);
 
     if (IS_GET_SESSIONS_INFO_TEST) {
     g_log.info("******%ld--------------------", uid);
@@ -276,7 +298,7 @@ int main (int argc, char **argv)
 		pthread_join(pids[i],NULL);
 	}
 
-  //  pause();
+  pause();
 
 
 	return 0;

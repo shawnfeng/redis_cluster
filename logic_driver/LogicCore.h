@@ -16,16 +16,21 @@ class LogicCore {
   hook_fin_delay_fn fin_delay_fn_;
   hook_upidx_fn upidx_fn_;
   hook_timeout_rm_fn timeout_rm_fn_;
+  hook_offline_notify_fn offline_notify_fn_;
+  hook_offline_notify_multi_fn offline_notify_multi_fn_;
+
 
  private:
   void check_timeout();
   int expire_stamp(int st, int cli_tp);
 
   int syn_fn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
-  int fin_fn(int timeout, long uid, const proto_fin &proto);
+  int fin_fn(int timeout, long uid, const proto_fin &proto, std::string &cli_info);
   int fin_delay_fn(int timeout, long uid, const proto_fin_delay &proto);
   int upidx_fn(int timeout, long uid, const proto_upidx &proto);
-  int timeout_rm_fn(int timeout, int stamp, int count);
+  int timeout_rm_fn(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs);
+  int offline_notify_fn(long uid, std::string &cli_info);
+  int offline_notify_multi_fn(std::vector< std::pair<long, std::string> > &rvs);
 
 
  public:
@@ -35,14 +40,20 @@ class LogicCore {
            hook_fin_fn fin,
            hook_fin_delay_fn fin_delay,
            hook_upidx_fn upidx,
-           hook_timeout_rm_fn timeout_rm
+           hook_timeout_rm_fn timeout_rm,
+           hook_offline_notify_fn offline_notify,
+           hook_offline_notify_multi_fn offline_notify_multi
+
            ) :
   log_(log),
     syn_fn_(syn),
     fin_fn_(fin),
     fin_delay_fn_(fin_delay),
     upidx_fn_(upidx),
-    timeout_rm_fn_(timeout_rm)
+    timeout_rm_fn_(timeout_rm),
+    offline_notify_fn_(offline_notify),
+    offline_notify_multi_fn_(offline_notify_multi)
+
   {
 
   }
