@@ -90,7 +90,7 @@ class RedisEvent {
 
  private:
 	void run();
-
+	void start ();
  public:
 	RedisEvent(LogOut *log
 		   ) : log_(log), loop_(EV_DEFAULT), ud_(this), req_count_(0)
@@ -100,6 +100,7 @@ class RedisEvent {
       cmd_argvlen_ = new size_t[ARGV_MAX_LEN];
     
 			log->info("%s-->loop:%p", "RedisEvent::RedisEvent", loop_);
+      start();
       
 		}
   ~RedisEvent()
@@ -114,7 +115,7 @@ class RedisEvent {
 
 	void connect(uint64_t addr);
 
-	void start ();
+
 	LogOut *log() { return log_; }
 
 	void cmd(RedisRvs &rv,

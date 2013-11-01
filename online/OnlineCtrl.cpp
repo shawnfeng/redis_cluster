@@ -61,22 +61,18 @@ void OnlineCtrl::load_script(const std::string &path, script_t &scp)
 OnlineCtrl::OnlineCtrl(
                        LogOut *log,
 
-                       const char *zk_addr,
-                       const char *zk_path,
+                       RedisEvent *re,
+                       RedisHash *rh,
 
                        const char *script_path
                        ) : log_(log),
-                           re_(log_), rh_(log_, &re_, zk_addr, zk_path),
+                           re_(re), rh_(rh),
                            sp_(script_path)
 {
-  re_.start();
-  rh_.start();
+  //  re_->start();
+  //  rh_->start();
 
   // init script
-  /*
-  load_script(sp_ + online_ope, s_online_);
-  load_script(sp_ + offline_ope, s_offline_);
-  */
   load_script(sp_ + get_session_info_ope, s_session_info_);
   load_script(sp_ + get_session_ope, s_sessions_);
   load_script(sp_ + get_multi_ope, s_multi_);
@@ -101,7 +97,7 @@ void OnlineCtrl::single_uid_commend(
                                     )
 {
 
-  uint64_t rd_addr = rh_.redis_addr_master(suid);
+  uint64_t rd_addr = rh_->redis_addr_master(suid);
   if (!rd_addr) {
     log_->error("%s-->error hash uid:%s", fun, suid.c_str());
     return;
@@ -111,7 +107,7 @@ void OnlineCtrl::single_uid_commend(
 
   addr_cmd.insert(pair< uint64_t, vector<string> >(rd_addr, vector<string>())).first->second.swap(args);
 
-  re_.cmd(rv, suid.c_str(), addr_cmd, timeout, lua_code, false);
+  re_->cmd(rv, suid.c_str(), addr_cmd, timeout, lua_code, false);
 
   /*
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
@@ -287,7 +283,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
        it != uids.end(); ++it) {
     long uid = *it;
     string suid = boost::lexical_cast<string>(uid);
-    uint64_t rd_addr = rh_.redis_addr_slave_first(suid);
+    uint64_t rd_addr = rh_->redis_addr_slave_first(suid);
     if (!rd_addr) {
       log_->error("%s-->acotor:%s error hash uid:%s", fun, sactor.c_str(), suid.c_str());
       continue;
@@ -318,7 +314,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
   }
 
   RedisRvs rv;
-  re_.cmd(rv, sactor.c_str(), addr_cmd, timeout, s_multi_.data, false);
+  re_->cmd(rv, sactor.c_str(), addr_cmd, timeout, s_multi_.data, false);
   // ================================
   for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     uint64_t addr = it->first;
@@ -351,7 +347,7 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count, std::vector< std::
   const char *fun = "OnlineCtrl::timeout_rm";
 
   map<int, uint64_t> all_redis;
-  rh_.redis_all(all_redis);
+  rh_->redis_all(all_redis);
   const script_t &script = s_timeout_rm_;
   map< uint64_t, vector<string> > addr_cmd;
 
@@ -367,7 +363,7 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count, std::vector< std::
   }
 
   RedisRvs rv;
-  re_.cmd(rv, "timeout_rm", addr_cmd, timeout, script.data, false);
+  re_->cmd(rv, "timeout_rm", addr_cmd, timeout, script.data, false);
 
 
   for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {

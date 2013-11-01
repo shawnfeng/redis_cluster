@@ -26,7 +26,7 @@ static void init_watcher(zhandle_t *zh, int type, int state, const char *path,
 int RedisCtrl::start()
 {
 	const char *fun = "RedisCtrl::start";
-  re_.start();
+  //  re_.start();
 
   // ----------------------
 

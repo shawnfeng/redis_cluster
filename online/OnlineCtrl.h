@@ -15,8 +15,8 @@ class OnlineCtrl {
   };
 
 	LogOut *log_;
-	RedisEvent re_;
-	RedisHash rh_;
+	RedisEvent *re_;
+	RedisHash *rh_;
 
 
   std::string sp_;
@@ -43,8 +43,8 @@ class OnlineCtrl {
  OnlineCtrl(
             LogOut *log,
 
-            const char *zk_addr,
-            const char *zk_path,
+            RedisEvent *re,
+            RedisHash *rh,
 
             const char *script_path
             );

@@ -69,6 +69,7 @@ class RedisCtrl {
   void do_slaveof_cmd(const std::map<std::string, std::string> &cmds, int try_times = 3);
   int legal_cmp(std::map< std::string, std::vector<std::string> > &cluster_legal_redis);
 
+  int start();
  public:
 
  RedisCtrl(LogOut *log,
@@ -83,10 +84,10 @@ class RedisCtrl {
     zk_node_path_(zk_root_path_ + "/legal_nodes")
 
 		{
-
+      start();
 		}
 	LogOut *log() { return log_; }
-  int start();
+
 
   void check();
 

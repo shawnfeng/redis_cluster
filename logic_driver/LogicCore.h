@@ -33,6 +33,7 @@ class LogicCore {
   int offline_notify_multi_fn(std::vector< std::pair<long, std::string> > &rvs);
 
 
+  void start();
  public:
  LogicCore(LogOut *log,
 
@@ -55,7 +56,7 @@ class LogicCore {
     offline_notify_multi_fn_(offline_notify_multi)
 
   {
-
+    start();
   }
 
   enum {
@@ -86,7 +87,7 @@ class LogicCore {
   };
 
 
-  void start();
+
 
   // interface
   void from_sublayer(const std::string &sublayer_index, const std::string &pro);

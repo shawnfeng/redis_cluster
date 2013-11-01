@@ -15,10 +15,17 @@ const int GET_SESSIONS_INFO_SLEEP = 2;
 
 const int CALL_TIMEOUT = 100;
 
-LogOut g_log;
+LogOut g_log(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_debug);
+
+RedisEvent g_re(&g_log);
+RedisHash g_rh(&g_log,
+               "10.4.25.15:4180,10.4.25.15:4181,10.4.25.15:4182",
+              "/tx/online/legal_nodes"
+               );
+
 OnlineCtrl g_oc(&g_log,
-              "10.4.25.15:4180,10.4.25.15:4181,10.4.25.15:4182",
-              "/tx/online/legal_nodes",
+                &g_re,
+                &g_rh,
 
               "/data/home/guangxiang.feng/redis_cluster/script");
 
@@ -282,7 +289,6 @@ int main (int argc, char **argv)
 
   sleep(INIT_SLEEP);
 
-  g_lc.start();
 
 	pthread_t pids[THREAD_NUMS];
 	int pn = (int)(sizeof(pids)/sizeof(pids[0]));

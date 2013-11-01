@@ -26,7 +26,7 @@ zk_ctx_t(const char *zk_addr,
 
 class RedisHash {
 	LogOut *log_;
-	RedisEvent *re_;
+
 	boost::shared_mutex smux_;
 
 	std::map< int, std::vector<uint64_t> > addrs_;
@@ -37,20 +37,22 @@ class RedisHash {
 	// zookeeper
 	zk_ctx_t zk_ctx_;
 
+ private:
+	int start();
  public:
 
- RedisHash(LogOut *log, RedisEvent *re,
+ RedisHash(LogOut *log,
 	   const char *zk_addr,
 	   const char *zk_path)
-	 : log_(log), re_(re),
+	 : log_(log),
 		zk_ctx_(zk_addr, zk_path)
 		{
-
+      start();
 		}
 	~RedisHash() { if (zk_ctx_.h) zookeeper_close(zk_ctx_.h);}
 	void update_ends(const std::map< int ,std::vector< std::pair<std::string, int> > > &ends);
 	zk_ctx_t *zk_ctx() { return &zk_ctx_; }
-	int start();
+
   // give the master
   uint64_t redis_addr_master(const std::string &key);
   // give the master
