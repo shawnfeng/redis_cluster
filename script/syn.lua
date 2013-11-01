@@ -36,7 +36,7 @@ end
 
 redis.call('ZADD', kc, st, klc)
 
-return {0, tonumber(sid)+1}
+return {0, tonumber(sid)}
 
 --return {err = "err test"}
 --return {ok = "OK test"}

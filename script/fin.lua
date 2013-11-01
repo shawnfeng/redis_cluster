@@ -25,6 +25,6 @@ redis.call('DEL', klc)
 redis.call('ZREM', kc, klc)
 
 return ofl
---return {tonumber(idp[1]), tonumber(idp[2])+1}
+--return {tonumber(idp[1]), tonumber(idp[2])}
 
 

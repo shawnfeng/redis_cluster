@@ -17,6 +17,7 @@ static const char *get_timeout_ope = "/timeout_rm.lua";
 static const char *syn_ope = "/syn.lua";
 static const char *fin_ope = "/fin.lua";
 static const char *fin_delay_ope = "/fin_delay.lua";
+static const char *upidx_ope = "/upidx.lua";
 
 
 static bool check_sha1(const char *path, string &data, string &sha1)
@@ -81,6 +82,7 @@ OnlineCtrl::OnlineCtrl(
   load_script(sp_ + syn_ope, s_syn_);
   load_script(sp_ + fin_ope, s_fin_);
   load_script(sp_ + fin_delay_ope, s_fin_delay_);
+  load_script(sp_ + upidx_ope, s_upidx_);
 
 
 
@@ -555,5 +557,65 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
 
 int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx)
 {
+  TimeUse tu;
+  const char *fun = "OnlineCtrl::upidx";
+
+
+  string suid = boost::lexical_cast<string>(uid);
+
+  const script_t &script = s_upidx_;
+  
+  vector<string> args;
+  args.push_back("EVALSHA");
+  args.push_back(script.sha1);
+  args.push_back("KEY_SUM");
+
+  args.push_back(suid);
+  int key_sum = proto.keys(args);
+  // update key sum
+  args[2] = boost::lexical_cast<string>(key_sum - 3);
+
+
+	RedisRvs rv;  
+  single_uid_commend(fun, timeout, suid, args, script.data, rv);
+
+  if (rv.size() != 1) {
+    log_->error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
+    return 2;
+  }
+
+  RedisRvs::const_iterator it = rv.begin();
+  const RedisRv &tmp = it->second;
+  //  tmp.dump(log_, fun, 2);
+
+  if (tmp.type != REDIS_REPLY_ARRAY && tmp.type != REDIS_REPLY_NIL) {
+    tmp.dump(log_, fun, 2);
+    log_->warn("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
+    return 2;
+  }
+
+  if (tmp.type == REDIS_REPLY_NIL) {
+    log_->warn("%s-->return actor:%ld nil", fun, uid);
+    return 1;
+  }
+
+
+  if (tmp.type != REDIS_REPLY_ARRAY
+      || tmp.element.size() != 2
+      || tmp.element.at(0).type != REDIS_REPLY_INTEGER
+      || tmp.element.at(1).type != REDIS_REPLY_INTEGER
+      ) {
+    tmp.dump(log_, fun, 3);
+    log_->error("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
+    return 3;
+  }
+
+  idx.send_idx = tmp.element.at(0).integer;
+  idx.recv_idx = tmp.element.at(1).integer;
+
+
+	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+
   return 0;
+
 }

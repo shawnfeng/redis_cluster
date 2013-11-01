@@ -37,6 +37,13 @@ int hook_syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx)
   return g_oc.syn(timeout, uid, proto, idx);
 }
 
+int hook_upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx)
+{
+  int rv = g_oc.upidx(timeout, uid, proto, idx);
+  g_log.info("hook_upidx-->rv:%d, sid:%d rid:%d", rv, idx.send_idx, idx.recv_idx);
+  return rv;
+}
+
 int hook_fin(int timeout, long uid, const proto_fin &proto, std::string &cli_info)
 {
   return g_oc.fin(timeout, uid, proto, cli_info);
@@ -73,7 +80,7 @@ int hook_offline_notify_multi(std::vector< std::pair<long, std::string> > &rvs)
 
 
 //int hook_upidx_fn(int timeout, long uid, const proto_heart &proto);
-  LogicCore g_lc(&g_log, hook_syn, hook_fin, hook_fin_delay, NULL, hook_timeout_rm,
+  LogicCore g_lc(&g_log, hook_syn, hook_fin, hook_fin_delay, hook_upidx, hook_timeout_rm,
                  hook_offline_notify, hook_offline_notify_multi);
 
 void get_multi_test()
@@ -173,11 +180,41 @@ void fin_delay_test()
 
 }
 
+void upidx_test()
+{
+  int head_len = LogicCore::PROTO_LEN_UPIDX;
+  long conn_idx = 2342134;
+  int pro_tp = LogicCore::PROTO_TYPE_UPIDX;
+  int sendidx = 1;
+  int recvidx = 0;
+  long uid = 10;
+
+  int delay = time(NULL) + 10;
+
+  char buff[LogicCore::PROTO_LEN_UPIDX];
+  char *p = buff;
+
+  p = bit32_ltt_stream(head_len, p, LogicCore::PROTO_LEN_HEAD);
+  p = bit64_ltt_stream(conn_idx, p, LogicCore::PROTO_LEN_CONN);
+  p = bit32_ltt_stream(pro_tp, p, LogicCore::PROTO_LEN_TYPE);
+  p = bit32_ltt_stream(sendidx, p, LogicCore::PROTO_LEN_SENDIDX);
+  p = bit32_ltt_stream(recvidx, p, LogicCore::PROTO_LEN_RECVIDX);
+  p = bit64_ltt_stream(uid, p, LogicCore::PROTO_LEN_UID);
+  p = bit32_ltt_stream(delay, p, LogicCore::PROTO_LEN_STAMP);
+
+  string sublayer_index = "adfasd/adfw";
+  string pro;
+  pro.assign(buff, LogicCore::PROTO_LEN_UPIDX);
+  g_lc.from_sublayer(sublayer_index, pro);
+
+}
+
 
 void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
-    syn_test();
+    //syn_test();
+    upidx_test();
     //fin_test();
     //fin_delay_test();
     //get_multi_test();
@@ -307,7 +344,7 @@ int main (int argc, char **argv)
 		pthread_join(pids[i],NULL);
 	}
 
-  pause();
+  //  pause();
 
 
 	return 0;

@@ -23,9 +23,9 @@ int LogicCore::fin_delay_fn(int timeout, long uid, const proto_fin_delay &proto)
   return fin_delay_fn_ ? fin_delay_fn_(timeout, uid, proto) : 0;
 }
 
-int LogicCore::upidx_fn(int timeout, long uid, const proto_upidx &proto)
+int LogicCore::upidx_fn(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx)
 {
-  return upidx_fn_ ? upidx_fn_(timeout, uid, proto) : 0;
+  return upidx_fn_ ? upidx_fn_(timeout, uid, proto, idx) : 0;
 }
 
 int LogicCore::timeout_rm_fn(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs)
@@ -142,8 +142,33 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
                   fun, uid, rv, head_len, conn_idx, pro_tp);
     }
 
-  }
 
+  } else if (PROTO_TYPE_UPIDX == pro_tp) {
+    if (pro.size() != PROTO_LEN_UPIDX) {
+      log_->info("%s->error upidx head:%d conn:%lu tp:%d", fun, head_len, conn_idx, pro_tp);
+    }
+
+    int sendidx = stream_ltt_bit32(&p, PROTO_LEN_SENDIDX);
+    int recvidx = stream_ltt_bit32(&p, PROTO_LEN_RECVIDX);
+    long uid = stream_ltt_bit64(&p, PROTO_LEN_UID);
+    int expire = stream_ltt_bit32(&p, PROTO_LEN_STAMP);
+
+    proto_upidx pr;
+    pr.head.logic_conn = conn_idx;
+    pr.head.idx.send_idx = sendidx;
+    pr.head.idx.recv_idx = recvidx;
+    pr.head.sublayer_index = sublayer_index;
+    pr.expire = expire;
+
+    proto_idx_pair ridx;
+    int rv = upidx_fn(TIMEOUT_UPIDX, uid, pr, ridx);
+    //    log_->info("##########-->rv:%d, sid:%d rid:%d", rv, ridx.send_idx, ridx.recv_idx);
+    if (rv) {
+      log_->error("%s-->uid:%ld rv:%d head:%d conn:%lu tp:%d",
+                  fun, uid, rv, head_len, conn_idx, pro_tp);
+    }
+
+  }
 }
 
 int LogicCore::expire_stamp(int st, int cli_tp)

@@ -27,7 +27,7 @@ class LogicCore {
   int syn_fn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
   int fin_fn(int timeout, long uid, const proto_fin &proto, std::string &cli_info);
   int fin_delay_fn(int timeout, long uid, const proto_fin_delay &proto);
-  int upidx_fn(int timeout, long uid, const proto_upidx &proto);
+  int upidx_fn(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx);
   int timeout_rm_fn(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs);
   int offline_notify_fn(long uid, std::string &cli_info);
   int offline_notify_multi_fn(std::vector< std::pair<long, std::string> > &rvs);
@@ -63,12 +63,14 @@ class LogicCore {
     TIMEOUT_SYN = 100,
     TIMEOUT_FIN = 100,
     TIMEOUT_FIN_DELAY = 100,
+    TIMEOUT_UPIDX = 100,
   };
 
   enum {
     PROTO_TYPE_SYN = 1,
     PROTO_TYPE_FIN = 2,
     PROTO_TYPE_FIN_DELAY = 3,
+    PROTO_TYPE_UPIDX = 4,
   };
 
   enum {
@@ -81,9 +83,12 @@ class LogicCore {
     PROTO_LEN_UID = 8,
     PROTO_LEN_STAMP = 4,
 
+
     PROTO_LEN_GLOBAL_HEAD = PROTO_LEN_HEAD + PROTO_LEN_CONN + PROTO_LEN_TYPE,
+
     PROTO_LEN_FIN = PROTO_LEN_GLOBAL_HEAD + PROTO_LEN_SENDIDX + PROTO_LEN_RECVIDX + PROTO_LEN_UID,
     PROTO_LEN_FIN_DELAY = PROTO_LEN_GLOBAL_HEAD + PROTO_LEN_SENDIDX + PROTO_LEN_RECVIDX + PROTO_LEN_UID + PROTO_LEN_STAMP,
+    PROTO_LEN_UPIDX = PROTO_LEN_GLOBAL_HEAD + PROTO_LEN_SENDIDX + PROTO_LEN_RECVIDX + PROTO_LEN_UID + PROTO_LEN_STAMP,
   };
 
 

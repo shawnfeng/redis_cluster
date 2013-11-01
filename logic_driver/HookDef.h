@@ -102,7 +102,7 @@ struct proto_ack {
 typedef int (*hook_syn_fn)(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
 typedef int (*hook_fin_fn)(int timeout, long uid, const proto_fin &proto, std::string &cli_info);
 typedef int (*hook_fin_delay_fn)(int timeout, long uid, const proto_fin_delay &proto);
-typedef int (*hook_upidx_fn)(int timeout, long uid, const proto_upidx &proto);
+typedef int (*hook_upidx_fn)(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx);
 typedef int (*hook_timeout_rm_fn)(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs);
 typedef int (*hook_offline_notify_fn)(long uid, std::string &cli_info);
 typedef int (*hook_offline_notify_multi_fn)(std::vector< std::pair<long, std::string> > &rvs);

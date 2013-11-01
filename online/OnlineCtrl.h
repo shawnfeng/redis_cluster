@@ -29,6 +29,7 @@ class OnlineCtrl {
   script_t s_syn_;
   script_t s_fin_;
   script_t s_fin_delay_;
+  script_t s_upidx_;
 
  private:
   void single_uid_commend(const char *fun,
