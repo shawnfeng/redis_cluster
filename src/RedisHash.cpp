@@ -10,18 +10,7 @@ using namespace std;
 
 static void redis_node_wc(zhandle_t *zh, int type, int state, const char *path, void *data);
 static void redis_node_cb(int rc, const struct String_vector *strings, const void *data);
-static void init_watcher(zhandle_t *zh, int type, int state, const char *path, void *data);
 
-static void init_watcher(zhandle_t *zh, int type, int state, const char *path,
-			 void *data)
-{
-	RedisHash *rh = (RedisHash *)data;
-	assert(rh);
-	LogOut *log = rh->log();
-
-	log->info("init_wc-->zh=%p,type=%d,state=%d,path=%s,watcherCtx=%p",
-		    zh, type, state, path, rh);
-}
 
 static void redis_node_wc(zhandle_t *zh, int type, int state, const char *path, void *data)
 {
@@ -131,18 +120,10 @@ static void redis_node_cb(int rc, const struct String_vector *strings, const voi
 
 int RedisHash::start()
 {
-	const char *fun = "RedisHash::start";
-	zoo_set_debug_level(ZOO_LOG_LEVEL_ERROR);
-	zhandle_t *zkh = zookeeper_init(zk_ctx_.addr.c_str(), init_watcher, 10000, 0, (void *)this, 0);
-	if (!zkh) {
-		log_->error("%s-->error init zk %s zk can not used, please check add restart", fun, zk_ctx_.addr.c_str());
-		return 1;
-	}
+  //	const char *fun = "RedisHash::start";
 
-	zk_ctx_.h = zkh;
-	log_->info("%s-->init ok zk %s", fun, zk_ctx_.addr.c_str());
 
-	int rc = zoo_awget_children(zkh,
+	int rc = zoo_awget_children(zk_ctx_.h,
 				    zk_ctx_.path.c_str(),
 				    redis_node_wc, (void *)this,
 				    redis_node_cb, (void *)this);

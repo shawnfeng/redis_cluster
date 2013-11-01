@@ -4,6 +4,8 @@
 
 #include "OnlineCtrl.h"
 #include "../logic_driver/LogicCore.h"
+
+#include "ZookeeperInit.h"
 using namespace std;
 
 const int INIT_SLEEP = 2;
@@ -15,11 +17,12 @@ const int GET_SESSIONS_INFO_SLEEP = 2;
 
 const int CALL_TIMEOUT = 100;
 
-LogOut g_log(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_debug);
+LogOut g_log(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error);
+ZKinit g_zk(&g_log, "10.4.25.15:4180,10.4.25.15:4181,10.4.25.15:4182");
 
 RedisEvent g_re(&g_log);
 RedisHash g_rh(&g_log,
-               "10.4.25.15:4180,10.4.25.15:4181,10.4.25.15:4182",
+               g_zk.handle(),
               "/tx/online/legal_nodes"
                );
 

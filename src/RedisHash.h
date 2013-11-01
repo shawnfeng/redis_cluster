@@ -13,14 +13,14 @@
 #include "RedisEvent.h"
 
 struct zk_ctx_t {
-	std::string addr;
+
 	zhandle_t *h;
 	std::string path;
 
 
-zk_ctx_t(const char *zk_addr,
+zk_ctx_t(zhandle_t *zkh,
 	 const char *zk_path) :
-	addr(zk_addr), h(NULL), path(zk_path) {}
+	h(zkh), path(zk_path) {}
 };
 
 
@@ -42,10 +42,10 @@ class RedisHash {
  public:
 
  RedisHash(LogOut *log,
-	   const char *zk_addr,
-	   const char *zk_path)
+           zhandle_t *zkh,
+           const char *zk_path)
 	 : log_(log),
-		zk_ctx_(zk_addr, zk_path)
+		zk_ctx_(zkh, zk_path)
 		{
       start();
 		}
