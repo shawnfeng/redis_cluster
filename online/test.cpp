@@ -16,7 +16,7 @@ const int GET_SESSIONS_INFO_SLEEP = 2;
 const int CALL_TIMEOUT = 100;
 
 LogOut g_log;
-OnlineCtrl g_oc(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error,
+OnlineCtrl g_oc(&g_log,
               "10.4.25.15:4180,10.4.25.15:4181,10.4.25.15:4182",
               "/tx/online/legal_nodes",
 
@@ -167,8 +167,8 @@ void fin_delay_test()
 void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
-    //syn_test();
-    fin_test();
+    syn_test();
+    //fin_test();
     //fin_delay_test();
     //get_multi_test();
     sleep(1);

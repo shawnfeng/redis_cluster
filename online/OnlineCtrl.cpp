@@ -51,25 +51,22 @@ static bool check_sha1(const char *path, string &data, string &sha1)
 void OnlineCtrl::load_script(const std::string &path, script_t &scp)
 {
 	if (!check_sha1(path.c_str(), scp.data, scp.sha1)) {
-		log_.error("%s error check sha1", path.c_str());
+		log_->error("%s error check sha1", path.c_str());
 	}
 
-	log_.info("data:%s sha1:%s", scp.data.c_str(), scp.sha1.c_str());
+	log_->info("data:%s sha1:%s", scp.data.c_str(), scp.sha1.c_str());
 
 }
 
-OnlineCtrl::OnlineCtrl(void (*log_t)(const char *),
-                       void (*log_d)(const char *),
-                       void (*log_i)(const char *),
-                       void (*log_w)(const char *),
-                       void (*log_e)(const char *),
+OnlineCtrl::OnlineCtrl(
+                       LogOut *log,
 
                        const char *zk_addr,
                        const char *zk_path,
 
                        const char *script_path
-                       ) : log_(log_t, log_d, log_i, log_w, log_e),
-                           re_(&log_), rh_(&log_, &re_, zk_addr, zk_path),
+                       ) : log_(log),
+                           re_(log_), rh_(log_, &re_, zk_addr, zk_path),
                            sp_(script_path)
 {
   re_.start();
@@ -106,7 +103,7 @@ void OnlineCtrl::single_uid_commend(
 
   uint64_t rd_addr = rh_.redis_addr_master(suid);
   if (!rd_addr) {
-    log_.error("%s-->error hash uid:%s", fun, suid.c_str());
+    log_->error("%s-->error hash uid:%s", fun, suid.c_str());
     return;
   }
 
@@ -119,7 +116,7 @@ void OnlineCtrl::single_uid_commend(
   /*
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     string addr = fun + boost::lexical_cast<string>(it->first);
-    it->second.dump(&log_, addr.c_str(), 0);
+    it->second.dump(log_, addr.c_str(), 0);
 	}
   */
 
@@ -144,7 +141,7 @@ void OnlineCtrl::offline(int timeout, long uid, const std::string &session)
 
   single_uid_commend(fun, timeout, suid, args, s_offline_.data, rv);
 
-	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
 
 }
 
@@ -163,7 +160,7 @@ void OnlineCtrl::online(int timeout, long uid,
 
 	size_t sz = kvs.size();
 	if (sz < 2 || sz % 2 != 0) {
-		log_.error("kvs % 2 0 size:%lu", sz);
+		log_->error("kvs % 2 0 size:%lu", sz);
 		return;
 	}
 
@@ -179,12 +176,12 @@ void OnlineCtrl::online(int timeout, long uid,
   args.push_back(boost::lexical_cast<string>(time(NULL)));
   args.insert(args.end(), kvs.begin(), kvs.end());
 
-  //	log_.info("%s-->arg uid:%ld tm:%ld", fun, uid, tu.intv_reset());
-	log_.debug("%s-->uid:%ld session:%s rv.size:%lu", fun, uid, session.c_str(), rv.size());
+  //	log_->info("%s-->arg uid:%ld tm:%ld", fun, uid, tu.intv_reset());
+	log_->debug("%s-->uid:%ld session:%s rv.size:%lu", fun, uid, session.c_str(), rv.size());
   
   single_uid_commend(fun, timeout, suid, args, s_online_.data, rv);
 
-	log_.info("%s-->over uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->over uid:%ld tm:%ld", fun, uid, tu.intv());
 
 
 }
@@ -205,7 +202,7 @@ void OnlineCtrl::get_sessions(int timeout, long uid, vector<string> &sessions)
   args.push_back(suid);
 
 
-	log_.debug("%s-->uid:%ld rv.size:%lu", fun, uid, rv.size());
+	log_->debug("%s-->uid:%ld rv.size:%lu", fun, uid, rv.size());
 
   single_uid_commend(fun, timeout, suid, args, s_sessions_.data, rv);  
 
@@ -224,7 +221,7 @@ void OnlineCtrl::get_sessions(int timeout, long uid, vector<string> &sessions)
 
     }
   }
-	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
 }
 
 
@@ -246,7 +243,7 @@ void OnlineCtrl::get_session_info(int timeout, long uid, const string &session, 
   args.push_back(session);
   args.insert(args.end(), ks.begin(), ks.end());
 
-	log_.debug("%s-->uid:%ld session:%s rv.size:%lu", fun, uid, session.c_str(), rv.size());
+	log_->debug("%s-->uid:%ld session:%s rv.size:%lu", fun, uid, session.c_str(), rv.size());
 
   single_uid_commend(fun, timeout, suid, args, s_session_info_.data, rv);
 
@@ -274,7 +271,7 @@ void OnlineCtrl::get_session_info(int timeout, long uid, const string &session, 
           }
 
         } else {
-          log_.error("%s-->return value not pair addr:%lu uid:%ld session:%s type:%d,int:%ld,str:%s",
+          log_->error("%s-->return value not pair addr:%lu uid:%ld session:%s type:%d,int:%ld,str:%s",
                      fun, addr, uid, session.c_str(), jt->type, jt->integer, jt->str.c_str());
 
         }
@@ -287,7 +284,7 @@ void OnlineCtrl::get_session_info(int timeout, long uid, const string &session, 
 
 	}
 
-	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
 }
 
 void OnlineCtrl::one_uid_session(long actor, const RedisRv &tmp, std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions)
@@ -300,7 +297,7 @@ void OnlineCtrl::one_uid_session(long actor, const RedisRv &tmp, std::map< long,
           || tmp.element.at(1).type != REDIS_REPLY_STRING
           || tmp.element.at(2).type != REDIS_REPLY_ARRAY
           ) {
-        log_.error("%s-->retrun sessions invalid format actor:%ld", fun, actor);
+        log_->error("%s-->retrun sessions invalid format actor:%ld", fun, actor);
         return;
       }
 
@@ -333,7 +330,7 @@ void OnlineCtrl::one_uid_session(long actor, const RedisRv &tmp, std::map< long,
             sessions[key] = jt->str;
           }
         } else {
-          log_.error("%s-->retrun sessions not pair actor:%ld", fun, actor);
+          log_->error("%s-->retrun sessions not pair actor:%ld", fun, actor);
 
         }
 
@@ -357,7 +354,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
     string suid = boost::lexical_cast<string>(uid);
     uint64_t rd_addr = rh_.redis_addr_slave_first(suid);
     if (!rd_addr) {
-      log_.error("%s-->acotor:%s error hash uid:%s", fun, sactor.c_str(), suid.c_str());
+      log_->error("%s-->acotor:%s error hash uid:%s", fun, sactor.c_str(), suid.c_str());
       continue;
     }
 
@@ -367,7 +364,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
 
   }
 
-  log_.info("%s-->addr.size:%lu uids.size:%lu", fun, disp_uids.size(), uids.size());
+  log_->info("%s-->addr.size:%lu uids.size:%lu", fun, disp_uids.size(), uids.size());
   map< uint64_t, vector<string> > addr_cmd;
 
   for (map< uint64_t, set<string> >::const_iterator it = disp_uids.begin();
@@ -382,7 +379,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
       args.push_back(*jt);
     }
 
-    log_.info("%s-->addr:%lu uids.size:%lu", fun, it->first, args.size()-3);
+    log_->info("%s-->addr:%lu uids.size:%lu", fun, it->first, args.size()-3);
   }
 
   RedisRvs rv;
@@ -392,10 +389,10 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
     uint64_t addr = it->first;
     const RedisRv &tmp = it->second;
     string saddr = fun + boost::lexical_cast<string>(addr);
-    tmp.dump(&log_, saddr.c_str(), 0);
+    tmp.dump(log_, saddr.c_str(), 0);
 
     if (tmp.type != REDIS_REPLY_ARRAY) {
-      log_.error("%s-->retrun sessions invalid format actor:%ld addr:%lu", fun, actor, addr);
+      log_->error("%s-->retrun sessions invalid format actor:%ld addr:%lu", fun, actor, addr);
       continue;
     }
 
@@ -409,7 +406,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
 
 
   }
-  log_.info("%s-->actor:%ld tm:%ld", fun, actor, tu.intv());
+  log_->info("%s-->actor:%ld tm:%ld", fun, actor, tu.intv());
 }
 
 
@@ -446,16 +443,16 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count, std::vector< std::
     if (tmp.type != REDIS_REPLY_ARRAY
         || tmp.element.size() % 2 != 0
           ) {
-      tmp.dump(&log_, saddr.c_str(), 3);
-      log_.error("%s-->retrun timeoutrm invalid format addr:%lu err:%s", fun, addr, tmp.str.c_str());
+      tmp.dump(log_, saddr.c_str(), 3);
+      log_->error("%s-->retrun timeoutrm invalid format addr:%lu err:%s", fun, addr, tmp.str.c_str());
       continue;
     } else {
       const vector<RedisRv> &tmp_eles = tmp.element;
       for (int i = 0; i < (int)tmp_eles.size(); i+=2) {
         if (tmp_eles.at(i).type != REDIS_REPLY_INTEGER
             || tmp_eles.at(i+1).type != REDIS_REPLY_STRING) {
-          tmp_eles.at(i).dump(&log_, saddr.c_str(), 3);
-          tmp_eles.at(i+1).dump(&log_, saddr.c_str(), 3);
+          tmp_eles.at(i).dump(log_, saddr.c_str(), 3);
+          tmp_eles.at(i+1).dump(log_, saddr.c_str(), 3);
         } else {
           rvs.push_back(pair<long, string>(tmp_eles.at(i).integer, tmp_eles.at(i+1).str));
         }
@@ -465,7 +462,7 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count, std::vector< std::
   }
 
 
-  log_.info("%s-->stamp:%d cn:%d tm:%lu rm_count:%lu", fun, stamp, count, tu.intv(), rvs.size());
+  log_->info("%s-->stamp:%d cn:%d tm:%lu rm_count:%lu", fun, stamp, count, tu.intv(), rvs.size());
   return 0;
 }
 
@@ -481,7 +478,7 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
   const vector<string> &kvs = proto.data;
 	size_t sz = kvs.size();
 	if (sz < 2 || sz % 2 != 0) {
-		log_.error("kvs % 2 0 size:%lu", sz);
+		log_->error("kvs % 2 0 size:%lu", sz);
 		return 1;
 	}
 
@@ -504,28 +501,28 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
 
   if (rv.size() != 1) {
-    log_.error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
+    log_->error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
     return 2;
   }
 
   RedisRvs::const_iterator it = rv.begin();
   const RedisRv &tmp = it->second;
-  //  tmp.dump(&log_, fun, 0);
+  //  tmp.dump(log_, fun, 0);
 
   if (tmp.type != REDIS_REPLY_ARRAY
       || tmp.element.size() != 2
       || tmp.element.at(0).type != REDIS_REPLY_INTEGER
       || tmp.element.at(1).type != REDIS_REPLY_INTEGER
       ) {
-    tmp.dump(&log_, fun, 3);
-    log_.error("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
+    tmp.dump(log_, fun, 3);
+    log_->error("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
     return 3;
   }
 
   idx.send_idx = tmp.element.at(0).integer;
   idx.recv_idx = tmp.element.at(1).integer;
 
-	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
 
   return 0;
 }
@@ -555,20 +552,20 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
 
   if (rv.size() != 1) {
-    log_.error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
+    log_->error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
     return 2;
   }
 
   RedisRvs::const_iterator it = rv.begin();
   const RedisRv &tmp = it->second;
-  //  tmp.dump(&log_, fun, 2);
+  //  tmp.dump(log_, fun, 2);
   if (tmp.type != REDIS_REPLY_STATUS) {
-    tmp.dump(&log_, fun, 2);
-    log_.warn("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
+    tmp.dump(log_, fun, 2);
+    log_->warn("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
   }
 
 
-	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
 
   return 0;
 
@@ -599,26 +596,26 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
 
   if (rv.size() != 1) {
-    log_.error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
+    log_->error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
     return 2;
   }
 
   RedisRvs::const_iterator it = rv.begin();
   const RedisRv &tmp = it->second;
-  //  tmp.dump(&log_, fun, 2);
+  //  tmp.dump(log_, fun, 2);
   int rvt = 0;
   if (tmp.type != REDIS_REPLY_STRING && tmp.type != REDIS_REPLY_NIL) {
-    tmp.dump(&log_, fun, 2);
-    log_.warn("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
+    tmp.dump(log_, fun, 2);
+    log_->warn("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
     rvt = 2;
   } else if (tmp.type == REDIS_REPLY_NIL) {
-    log_.warn("%s-->return actor:%ld nil", fun, uid);
+    log_->warn("%s-->return actor:%ld nil", fun, uid);
     rvt = 1;
   } else {
     cli_info = tmp.str;
   }
 
-	log_.info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
 
   return rvt;
 

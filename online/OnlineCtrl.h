@@ -14,7 +14,7 @@ class OnlineCtrl {
     std::string data;
   };
 
-	LogOut log_;
+	LogOut *log_;
 	RedisEvent re_;
 	RedisHash rh_;
 
@@ -43,11 +43,8 @@ class OnlineCtrl {
   void one_uid_session(long actor, const RedisRv &rv, std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions);
   void load_script(const std::string &path, script_t &scp);
  public:
- OnlineCtrl(void (*log_t)(const char *),
-            void (*log_d)(const char *),
-            void (*log_i)(const char *),
-            void (*log_w)(const char *),
-            void (*log_e)(const char *),
+ OnlineCtrl(
+            LogOut *log,
 
             const char *zk_addr,
             const char *zk_path,
