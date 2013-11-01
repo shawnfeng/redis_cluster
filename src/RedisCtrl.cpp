@@ -100,7 +100,7 @@ int RedisCtrl::get_nodes(const char *path, bool isaddr, set<string> &addrs)
     return 1;
   }
 
-  log_->info("%s-->path:%s addrs.size:%lu", fun, path, addrs.size());
+  log_->debug("%s-->path:%s addrs.size:%lu", fun, path, addrs.size());
   return 0;
 
 
@@ -465,7 +465,7 @@ void RedisCtrl::check()
   for (map< string, set<string> >::const_iterator it = cfgs.begin();
        it != cfgs.end(); ++it) {
     for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-      log_->info("%s-->configinfo %s node:%s", fun, it->first.c_str(), jt->c_str());
+      log_->debug("%s-->configinfo %s node:%s", fun, it->first.c_str(), jt->c_str());
     }
 
   }
@@ -483,7 +483,7 @@ void RedisCtrl::check()
   for (map< string, set<string> >::const_iterator it = errs.begin();
        it != errs.end(); ++it) {
     for (set<string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-      log_->info("%s-->errors %s node:%s", fun, it->first.c_str(), jt->c_str());
+      log_->warn("%s-->errors %s node:%s", fun, it->first.c_str(), jt->c_str());
     }
 
   }
@@ -502,7 +502,7 @@ void RedisCtrl::check()
 
   for (map< string, map<string, string> >::const_iterator it = chks.begin(); it != chks.end(); ++it) {
   for (map<string, string>::const_iterator jt = it->second.begin(); jt != it->second.end(); ++jt) {
-    log_->info("%s-->checks %s node:%s %s", fun, it->first.c_str(), jt->first.c_str(), jt->second.c_str());
+    log_->debug("%s-->checks %s node:%s %s", fun, it->first.c_str(), jt->first.c_str(), jt->second.c_str());
     }
 
   }
@@ -545,7 +545,7 @@ void RedisCtrl::check()
  check_redis(addrs,  redis_cfgs);
  log_->info("%s-->check_redis size:%lu", fun, redis_cfgs.size());
  for (map<string, string>::const_iterator it = redis_cfgs.begin(); it != redis_cfgs.end(); ++it) {
-   log_->info("%s-->check_redis addr:%s slaveof:%s", fun, it->first.c_str(), it->second.c_str());
+   log_->debug("%s-->check_redis addr:%s slaveof:%s", fun, it->first.c_str(), it->second.c_str());
  }
 
  // error check
@@ -1025,7 +1025,7 @@ int RedisCtrl::gen_legal_redis(const std::map<std::string, std::string> &cfgs)
       }
 
       const string &cfg = kt->second;
-      log_->info("%s-->check cluster:%s master:%s seq:%s redis:%s cfg:%s",
+      log_->debug("%s-->check cluster:%s master:%s seq:%s redis:%s cfg:%s",
                  fun, cluster, master.c_str(), seq.c_str(), rds.c_str(), cfg.c_str());
 
       if (jt == rds_seq.begin()) {
@@ -1155,6 +1155,7 @@ void RedisCtrl::do_slaveof_cmd(const std::map<std::string, std::string> &cmds, i
   }
 
   RedisRvs rv;
+  if (addr_cmd.empty()) return;
   re_->cmd(rv, "legal_redis", addr_cmd, 200, "", false);
 
   set<string> ok_addrs;
