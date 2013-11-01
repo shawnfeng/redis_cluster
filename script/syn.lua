@@ -13,7 +13,7 @@ local rid = KEYS[4]
 -- gate locate
 local gate = KEYS[5]
 -- expire stamp
-local st = KEYS[6]
+local st = tonumber(KEYS[6])
 -- client type
 local ct = KEYS[7]
 -- client version
@@ -33,6 +33,23 @@ redis.call('HMSET', klc, "SID", 0, "RID", sid, "GATE", gate, "CT", ct, "CV", cv)
 for i=1, #ARGV, 2 do
    redis.call('HSET', klc, ARGV[i], ARGV[i+1])
 end
+
+local ct = tonumber(ct)
+
+if ct >= 100 and ct < 300 then
+   st = st + 600
+
+elseif ct >= 0 and ct < 100 then
+   st = st + 1200
+
+elseif ct == 100000 then
+   st = st + 20
+
+else
+   st = st + 600
+
+end
+
 
 redis.call('ZADD', kc, st, klc)
 

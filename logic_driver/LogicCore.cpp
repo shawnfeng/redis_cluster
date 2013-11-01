@@ -203,7 +203,8 @@ void LogicCore::from_sublayer_synok(long uid, long conn, int cli_tp, const strin
 
   int ns = time(NULL);
 
-  p.expire = expire_stamp(ns, cli_tp);
+  //  p.expire = expire_stamp(ns, cli_tp);
+  p.expire = ns;
 
   p.cli_type = cli_tp;
   p.cli_ver = ver;

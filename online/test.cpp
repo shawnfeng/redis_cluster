@@ -189,7 +189,7 @@ void upidx_test()
   int recvidx = 0;
   long uid = 10;
 
-  int delay = time(NULL) + 10;
+  int delay = time(NULL);
 
   char buff[LogicCore::PROTO_LEN_UPIDX];
   char *p = buff;
@@ -202,7 +202,7 @@ void upidx_test()
   p = bit64_ltt_stream(uid, p, LogicCore::PROTO_LEN_UID);
   p = bit32_ltt_stream(delay, p, LogicCore::PROTO_LEN_STAMP);
 
-  string sublayer_index = "adfasd/adfw";
+  string sublayer_index = "adfasd/adfw_up";
   string pro;
   pro.assign(buff, LogicCore::PROTO_LEN_UPIDX);
   g_lc.from_sublayer(sublayer_index, pro);
