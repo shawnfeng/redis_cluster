@@ -20,10 +20,7 @@ class OnlineCtrl {
 
 
   std::string sp_;
-  /*
-  script_t s_online_;
-  script_t s_offline_;
-  */
+
   script_t s_session_info_;
   script_t s_sessions_;
   script_t s_multi_;
