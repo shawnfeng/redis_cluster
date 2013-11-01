@@ -14,7 +14,7 @@
 
 class RedisCtrl {
 	LogOut *log_;
-	RedisEvent re_;
+	RedisEvent *re_;
 	// zookeeper
 	std::string zk_addr_;
   std::string zk_root_path_;
@@ -73,9 +73,10 @@ class RedisCtrl {
  public:
 
  RedisCtrl(LogOut *log,
+           RedisEvent *re,
 	   const char *zk_addr,
 	   const char *zk_root_path)
-	 : log_(log), re_(log), zk_addr_(zk_addr),
+	 : log_(log), re_(re), zk_addr_(zk_addr),
     zk_root_path_(zk_root_path), zkh_(NULL),
     zk_lock_path_(zk_root_path_ + "/lock"),
     zk_cfg_path_(zk_root_path_ + "/config"),

@@ -26,7 +26,7 @@ static void init_watcher(zhandle_t *zh, int type, int state, const char *path,
 int RedisCtrl::start()
 {
 	const char *fun = "RedisCtrl::start";
-  //  re_.start();
+  //  re_->start();
 
   // ----------------------
 
@@ -772,7 +772,7 @@ void RedisCtrl::check_redis(const set<string> &addrs, map<string, string> &cfgs,
 
   }
 
-  re_.cmd(rv, "check_redis", addr_cmd, 100, "", false);
+  re_->cmd(rv, "check_redis", addr_cmd, 100, "", false);
 
 
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
@@ -1155,7 +1155,7 @@ void RedisCtrl::do_slaveof_cmd(const std::map<std::string, std::string> &cmds, i
   }
 
   RedisRvs rv;
-  re_.cmd(rv, "legal_redis", addr_cmd, 200, "", false);
+  re_->cmd(rv, "legal_redis", addr_cmd, 200, "", false);
 
   set<string> ok_addrs;
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
