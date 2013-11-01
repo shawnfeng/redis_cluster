@@ -11,10 +11,10 @@ test_ctrl: test_ctrl.o
 OnlineCtrl.o: OnlineCtrl.cpp OnlineCtrl.h
 	$(CC) $(CCFLAGS) OnlineCtrl.cpp
 
-test.o: test.cpp OnlineCtrl.h
+test.o: test.cpp OnlineCtrl.h ZookeeperInit.h
 	$(CC) $(CCFLAGS) test.cpp
 
-test_ctrl.o: test_ctrl.cpp
+test_ctrl.o: test_ctrl.cpp ZookeeperInit.h
 	$(CC) $(CCFLAGS) test_ctrl.cpp
 
 

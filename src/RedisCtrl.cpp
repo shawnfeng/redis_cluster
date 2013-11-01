@@ -11,33 +11,14 @@ const char *CLUSTER_PREFIX = "cluster";
 const char *REDIS_PREFIX = "r";
 
 
-static void init_watcher(zhandle_t *zh, int type, int state, const char *path,
-			 void *data)
-{
-	RedisCtrl *rc = (RedisCtrl *)data;
-	assert(rc);
-	LogOut *log = rc->log();
-
-	log->info("init_wc-->zh=%p,type=%d,state=%d,path=%s,watcherCtx=%p",
-		    zh, type, state, path, rc);
-}
 
 
 int RedisCtrl::start()
 {
-	const char *fun = "RedisCtrl::start";
-  //  re_->start();
+  //	const char *fun = "RedisCtrl::start";
+
 
   // ----------------------
-
-	zoo_set_debug_level(ZOO_LOG_LEVEL_ERROR);
-	zkh_ = zookeeper_init(zk_addr_.c_str(), init_watcher, 10000, 0, (void *)this, 0);
-	if (!zkh_) {
-		log_->error("%s-->error init zk %s zk can not used, please check add restart", fun, zk_addr_.c_str());
-		return 1;
-	}
-
-	log_->info("%s-->init ok zk %s", fun, zk_addr_.c_str());
 
 	return 0;
 }
