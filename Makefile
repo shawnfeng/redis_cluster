@@ -1,10 +1,15 @@
-all: base_lib online
+all: base_lib online logic
 
 base_lib:
 	cd src && $(MAKE)
 
-online: base_lib
+logic:
+	cd logic_driver && $(MAKE)
+
+online: base_lib logic
 	cd online && $(MAKE)
+
+
 
 
 test: base_lib
