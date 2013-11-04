@@ -455,7 +455,10 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
   idx.send_idx = tmp.element.at(0).integer;
   idx.recv_idx = tmp.element.at(1).integer;
 
-	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+  //	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s cli_type:%d",
+             fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str(), proto.cli_type);
+
 
   return 0;
 }
@@ -498,7 +501,10 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
   }
 
 
-	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+  //	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s",
+             fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str());
+
 
   return 0;
 
@@ -548,7 +554,8 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
     cli_info = tmp.str;
   }
 
-	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s",
+             fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str());
 
   return rvt;
 
@@ -614,7 +621,10 @@ int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx
   idx.recv_idx = tmp.element.at(1).integer;
 
 
-	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+  //	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
+	log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s cli_type:%d",
+             fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str(), proto.cli_type);
+
 
   return 0;
 
