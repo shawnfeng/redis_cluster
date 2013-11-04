@@ -1,4 +1,4 @@
-if #KEYS ~= 6 then
+if #KEYS ~= 8 then
    return {err = 'error keys size '..#KEYS}
 end
 
@@ -14,43 +14,48 @@ local rid = KEYS[4]
 local gate = KEYS[5]
 -- expire stamp
 local st = tonumber(KEYS[6])
+-- client type
+local ct = KEYS[7]
+-- client version
+local cv = KEYS[8]
 
+-- client check
+-- if ct
 
+local kuid = 'U.'..uid
 local klc = 'L.'..uid..'.'..lc
 local kc = 'TIMEOUT_CHECK'
 
-local ifo = redis.call('HMGET', klc, 'SID', 'RID', 'GATE', 'CT')
+redis.call('HSETNX', kuid, lc, ct..';'..cv)
 
-if ifo[1] then
-   if ifo[3] ~= gate then
-      redis.call('HSET', klc, "GATE", gate)
-   end
+redis.call('HMSET', klc, "SID", 0, "RID", sid, "GATE", gate, "CT", ct, "CV", cv)
 
-   local ct = tonumber(ifo[4])
-
-   if ct >= 100 and ct < 300 then
-      st = st + 600
-
-   elseif ct >= 0 and ct < 100 then
-      st = st + 1200
-
-   elseif ct == 100000 then
-      st = st + 20
-
-   else
-      st = st + 600
-
-   end
-
-
-
-
-
-   redis.call('ZADD', kc, st, klc)
-   return {tonumber(ifo[1]), tonumber(ifo[2])}
-
-else 
-   return nil
+for i=1, #ARGV, 2 do
+   redis.call('HSET', klc, ARGV[i], ARGV[i+1])
 end
+
+local ct = tonumber(ct)
+
+if ct >= 100 and ct < 300 then
+   st = st + 600
+
+elseif ct >= 0 and ct < 100 then
+   st = st + 1200
+
+elseif ct == 100000 then
+   st = st + 20
+
+else
+   st = st + 600
+
+end
+
+
+redis.call('ZADD', kc, st, klc)
+
+return {0, tonumber(sid)}
+
+--return {err = "err test"}
+--return {ok = "OK test"}
 
 

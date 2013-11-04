@@ -151,7 +151,9 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
     int sendidx = stream_ltt_bit32(&p, PROTO_LEN_SENDIDX);
     int recvidx = stream_ltt_bit32(&p, PROTO_LEN_RECVIDX);
     long uid = stream_ltt_bit64(&p, PROTO_LEN_UID);
-    int expire = stream_ltt_bit32(&p, PROTO_LEN_STAMP);
+    int expire = time(NULL);
+    int cli_tp = stream_ltt_bit32(&p, PROTO_LEN_CLI_TYPE);
+    //log_->info("########### %d %d %ld", cli_tp, expire, uid);
 
     proto_upidx pr;
     pr.head.logic_conn = conn_idx;
@@ -159,6 +161,7 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
     pr.head.idx.recv_idx = recvidx;
     pr.head.sublayer_index = sublayer_index;
     pr.expire = expire;
+    pr.cli_type = cli_tp;
 
     proto_idx_pair ridx;
     int rv = upidx_fn(TIMEOUT_UPIDX, uid, pr, ridx);

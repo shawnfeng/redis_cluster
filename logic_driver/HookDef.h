@@ -79,11 +79,16 @@ struct proto_fin_delay {
 struct proto_upidx {
   proto_gb_head head;
   int expire;
+
+  int cli_type;
+  std::string cli_ver;
 proto_upidx() : expire(0) {}
   int keys(std::vector<std::string> &d) const
   {
     head.keys(d);
     d.push_back(boost::lexical_cast<std::string>(expire));
+    d.push_back(boost::lexical_cast<std::string>(cli_type));
+    d.push_back(cli_ver);
     return (int)d.size();
   }
 

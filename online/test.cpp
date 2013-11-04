@@ -182,27 +182,35 @@ void fin_delay_test()
 
 void upidx_test()
 {
-  int head_len = LogicCore::PROTO_LEN_UPIDX;
   long conn_idx = 2342134;
+  long uid = 10;
+  int cli_tp = 100000;
+  string sublayer_index = "adfasd/adfw_up";
+
+
+  int head_len = LogicCore::PROTO_LEN_UPIDX;
   int pro_tp = LogicCore::PROTO_TYPE_UPIDX;
   int sendidx = 1;
   int recvidx = 0;
-  long uid = 10;
-
-  int delay = time(NULL);
-
   char buff[LogicCore::PROTO_LEN_UPIDX];
   char *p = buff;
 
   p = bit32_ltt_stream(head_len, p, LogicCore::PROTO_LEN_HEAD);
   p = bit64_ltt_stream(conn_idx, p, LogicCore::PROTO_LEN_CONN);
   p = bit32_ltt_stream(pro_tp, p, LogicCore::PROTO_LEN_TYPE);
+
   p = bit32_ltt_stream(sendidx, p, LogicCore::PROTO_LEN_SENDIDX);
   p = bit32_ltt_stream(recvidx, p, LogicCore::PROTO_LEN_RECVIDX);
   p = bit64_ltt_stream(uid, p, LogicCore::PROTO_LEN_UID);
-  p = bit32_ltt_stream(delay, p, LogicCore::PROTO_LEN_STAMP);
+  p = bit32_ltt_stream(cli_tp, p, LogicCore::PROTO_LEN_CLI_TYPE);
+  /*
+  for (int i = 0; i < LogicCore::PROTO_LEN_UPIDX; ++i) {
+    
+    g_log.info("%d %X", i, (unsigned char)buff[i]);
+  }
+  */
 
-  string sublayer_index = "adfasd/adfw_up";
+
   string pro;
   pro.assign(buff, LogicCore::PROTO_LEN_UPIDX);
   g_lc.from_sublayer(sublayer_index, pro);
