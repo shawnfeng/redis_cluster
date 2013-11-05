@@ -113,7 +113,8 @@ void get_multi_test()
 void syn_test()
 {
   long uid = 10;
-  int cli_tp = 100000;
+  //int cli_tp = 100000;
+  int cli_tp = 100;
   long conn = 2342134;
   string sublayer_index = "adfasd/adfw";
   map<string, string> kvs;
@@ -184,7 +185,8 @@ void upidx_test()
 {
   long conn_idx = 2342134;
   long uid = 10;
-  int cli_tp = 100000;
+  //int cli_tp = 100000;
+  int cli_tp = 100;
   string sublayer_index = "adfasd/adfw_up";
 
 
