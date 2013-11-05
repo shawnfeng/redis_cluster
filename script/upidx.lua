@@ -28,7 +28,8 @@ local kc = 'TIMEOUT_CHECK'
 
 redis.call('HSETNX', kuid, lc, ct..';'..cv)
 
-redis.call('HMSET', klc, "SID", 0, "RID", sid, "GATE", gate, "CT", ct, "CV", cv)
+redis.call('HMSET', klc, "SID", 0, "RID", sid, "GATE", gate, "CT", ct)
+redis.call('HSETNX', klc, "CV", cv)
 
 for i=1, #ARGV, 2 do
    redis.call('HSET', klc, ARGV[i], ARGV[i+1])

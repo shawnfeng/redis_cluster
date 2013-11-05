@@ -222,9 +222,9 @@ void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     //syn_test();
-    //upidx_test();
+    upidx_test();
     //fin_test();
-    fin_delay_test();
+    //fin_delay_test();
     //get_multi_test();
     sleep(1);
   }
