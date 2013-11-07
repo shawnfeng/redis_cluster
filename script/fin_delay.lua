@@ -26,7 +26,8 @@ if bgate == gate then
    redis.call('HSET', klc, 'GATE', '')
    return {ok = "OK"}
 else
-   return nil
+   --return nil
+   return {ok = "OK"}
 end
 
 --return {tonumber(idp[1]), tonumber(idp[2])}

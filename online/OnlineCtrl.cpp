@@ -495,10 +495,15 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
   RedisRvs::const_iterator it = rv.begin();
   const RedisRv &tmp = it->second;
   //  tmp.dump(log_, fun, 2);
-  if (tmp.type != REDIS_REPLY_STATUS) {
+  if (tmp.type != REDIS_REPLY_STATUS && tmp.type != REDIS_REPLY_NIL) {
     tmp.dump(log_, fun, 2);
     log_->warn("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
   }
+
+  if (tmp.type == REDIS_REPLY_NIL) {
+    log_->warn("%s-->return actor:%ld nil", fun, uid);
+  }
+
 
 
   //	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
