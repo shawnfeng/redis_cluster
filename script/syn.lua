@@ -39,7 +39,7 @@ local ct = tonumber(ct)
 
 if ct >= 100 and ct < 200 then
    --st = '+inf'
-   st = st + 1800
+   st = st + 600
 
 elseif ct >= 200 and ct < 300 then
    st = st + 600
