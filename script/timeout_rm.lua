@@ -22,8 +22,11 @@ for i=1, #lcs, 2 do
    local lc = string.sub(klc, idx+1)
    local kuid = 'U.'..uid
 
-   ofl[#ofl+1] = tonumber(uid)
-   ofl[#ofl+1] = redis.call('HGET', kuid, lc)
+   local tv = redis.call('HGET', kuid, lc)
+   if tv then
+      ofl[#ofl+1] = tonumber(uid)
+      ofl[#ofl+1] = tv
+   end
 
    redis.call('HDEL', kuid, lc)
 end

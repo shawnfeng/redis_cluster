@@ -553,7 +553,7 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
     log_->warn("%s-->retrun invalid format actor:%ld err:%s", fun, uid, tmp.str.c_str());
     rvt = 2;
   } else if (tmp.type == REDIS_REPLY_NIL) {
-    log_->warn("%s-->return actor:%ld nil", fun, uid);
+    //log_->warn("%s-->return actor:%ld nil", fun, uid);
     rvt = 1;
   } else {
     cli_info = tmp.str;

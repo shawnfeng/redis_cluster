@@ -109,8 +109,14 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
     string cli_info;
     int rv = fin_fn(TIMEOUT_FIN, uid, pr, cli_info);
     if (rv) {
-      log_->warn("%s-->uid:%ld rv:%d head:%d conn:%lu tp:%d",
+      // 
+      if (1 == rv) {
+        log_->info("%s-->nil online uid:%ld rv:%d head:%d conn:%lu tp:%d",
                   fun, uid, rv, head_len, conn_idx, pro_tp);
+      } else {
+        log_->warn("%s-->invalid uid:%ld rv:%d head:%d conn:%lu tp:%d",
+                  fun, uid, rv, head_len, conn_idx, pro_tp);
+      }
     } else {
       rv = offline_notify_fn(uid, cli_info);
       if (rv) {
