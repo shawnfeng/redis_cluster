@@ -5,7 +5,7 @@ end
 local st = KEYS[1]
 local cn = KEYS[2]
 
-local kc = 'TIMEOUT_CHECK'
+local kc = 'DLY_CK'
 
 
 local lcs = redis.call('ZRANGEBYSCORE', kc, '-inf', st, 'WITHSCORES')

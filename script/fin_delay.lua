@@ -17,7 +17,7 @@ local delay = KEYS[6]
 
 
 local klc = 'L.'..uid..'.'..lc
-local kc = 'TIMEOUT_CHECK'
+local kc = 'DLY_CK'
 
 local bgate = redis.call('HGET', klc, 'GATE')
 

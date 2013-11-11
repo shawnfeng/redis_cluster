@@ -16,13 +16,15 @@ local gate = KEYS[5]
 
 local kuid = 'U.'..uid
 local klc = 'L.'..uid..'.'..lc
-local kc = 'TIMEOUT_CHECK'
+local kc = 'DLY_CK'
 
 --local idp = redis.call('HMGET', klc, 'SID', 'RID')
+-- don't need care the uid expire
 local ofl = redis.call('HGET', kuid, lc)
 redis.call('HDEL', kuid, lc)
 redis.call('DEL', klc)
 redis.call('ZREM', kc, klc)
+
 
 return ofl
 --return {tonumber(idp[1]), tonumber(idp[2])}

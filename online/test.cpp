@@ -17,8 +17,12 @@ const int GET_SESSIONS_INFO_SLEEP = 2;
 
 const int CALL_TIMEOUT = 100;
 
+//const char *zk_add = "10.4.25.15:4180,10.4.25.15:4181,10.4.25.15:4182";
+const char *zk_addr = "t87.xntalk.d.xiaonei.com:4180,t87.xntalk.d.xiaonei.com:4181,t87.xntalk.d.xiaonei.com:4182";
+
+
 LogOut g_log(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error);
-ZKinit g_zk(&g_log, "10.4.25.15:4180,10.4.25.15:4181,10.4.25.15:4182");
+ZKinit g_zk(&g_log, zk_addr);
 
 RedisEvent g_re(&g_log);
 RedisHash g_rh(&g_log,
@@ -113,8 +117,8 @@ void get_multi_test()
 void syn_test()
 {
   long uid = 10;
-  //int cli_tp = 100000;
-  int cli_tp = 100;
+  int cli_tp = 100000;
+  //int cli_tp = 100;
   long conn = 2342134;
   string sublayer_index = "adfasd/adfw";
   map<string, string> kvs;
@@ -183,7 +187,7 @@ void fin_delay_test()
 
 void upidx_test()
 {
-  long conn_idx = 2342134;
+  long conn_idx = 23421345;
   long uid = 10;
   //int cli_tp = 100000;
   int cli_tp = 100;
@@ -224,8 +228,8 @@ void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     //syn_test();
-    upidx_test();
-    //fin_test();
+    //upidx_test();
+    fin_test();
     //fin_delay_test();
     //get_multi_test();
     sleep(1);
@@ -354,7 +358,7 @@ int main (int argc, char **argv)
 		pthread_join(pids[i],NULL);
 	}
 
-  //  pause();
+  pause();
 
 
 	return 0;

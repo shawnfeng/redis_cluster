@@ -13,7 +13,7 @@ local rid = KEYS[4]
 -- gate locate
 local gate = KEYS[5]
 -- expire stamp
-local st = tonumber(KEYS[6])
+--local st = tonumber(KEYS[6])
 -- client type
 local ct = KEYS[7]
 -- client version
@@ -24,7 +24,18 @@ local cv = KEYS[8]
 
 local kuid = 'U.'..uid
 local klc = 'L.'..uid..'.'..lc
-local kc = 'TIMEOUT_CHECK'
+local kc = 'DLY_CK'
+
+-- expire check
+local lcs = redis.call('HKEYS', kuid)
+for i,v in ipairs(lcs) do
+   local tmp = 'L.'..uid..'.'..v
+   if 0 == redis.call('EXISTS', tmp) then
+      redis.call('HDEL', kuid, v)
+   end
+end
+
+-------------------------------------------
 
 redis.call('HSETNX', kuid, lc, ct..';'..cv)
 
@@ -36,27 +47,35 @@ for i=1, #ARGV, 2 do
 end
 
 local ct = tonumber(ct)
+local ep
 
 if ct >= 100 and ct < 200 then
    --st = '+inf'
-   st = st + 600
+   ep = 600
 
 elseif ct >= 200 and ct < 300 then
-   st = st + 600
+   ep = 600
 
 elseif ct >= 0 and ct < 100 then
-   st = st + 1200
+   ep = 1200
 
 elseif ct == 100000 then
-   st = st + 20
+   ep = 60
 
 else
-   st = st + 600
+   ep = 600
 
 end
 
+redis.call('EXPIRE', klc, ep)
 
-redis.call('ZADD', kc, st, klc)
+if redis.call('TTL', kuid) < ep then
+   redis.call('EXPIRE', kuid, ep)
+end
+
+--redis.call('ZADD', kc, st, klc)
+redis.call('ZREM', kc, klc)
+
 
 return {0, tonumber(sid)}
 
