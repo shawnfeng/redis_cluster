@@ -24,13 +24,6 @@ class LogicCore {
   void check_timeout();
   int expire_stamp(int st, int cli_tp);
 
-  int syn_fn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
-  int fin_fn(int timeout, long uid, const proto_fin &proto, std::string &cli_info);
-  int fin_delay_fn(int timeout, long uid, const proto_fin_delay &proto);
-  int upidx_fn(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx);
-  int timeout_rm_fn(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs);
-  int offline_notify_fn(long uid, std::string &cli_info);
-  int offline_notify_multi_fn(std::vector< std::pair<long, std::string> > &rvs);
 
 
   void start();
@@ -97,10 +90,21 @@ class LogicCore {
 
 
 
+  LogOut *log() { return log_; }
+
+  int syn_fn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
+  int fin_fn(int timeout, long uid, const proto_fin &proto, std::string &cli_info);
+  int fin_delay_fn(int timeout, long uid, const proto_fin_delay &proto);
+  int upidx_fn(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx);
+  int timeout_rm_fn(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs);
+  int offline_notify_fn(long uid, std::string &cli_info);
+  int offline_notify_multi_fn(std::vector< std::pair<long, std::string> > &rvs);
 
   // interface
-  void from_sublayer(const std::string &sublayer_index, const std::string &pro);
+  void from_sublayer_old(const std::string &sublayer_index, const std::string &pro);
   void from_sublayer_synok(long uid, long conn, int cli_tp, const std::string &ver, const std::string &sublayer_index, const std::map<std::string, std::string> &data);
+
+  void from_sublayer(const std::string &sublayer_index, const std::string &pro);
 
 
 

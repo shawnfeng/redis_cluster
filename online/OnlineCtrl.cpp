@@ -410,7 +410,7 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
 
   const vector<string> &kvs = proto.data;
 	size_t sz = kvs.size();
-	if (sz < 2 || sz % 2 != 0) {
+	if (sz % 2 != 0) {
 		log_->error("kvs % 2 0 size:%lu", sz);
 		return 1;
 	}

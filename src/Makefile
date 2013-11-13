@@ -3,8 +3,9 @@ include ../Makefile.mk
 #SRCS=libev.cpp  RedisClient.cpp  RedisEvent.cpp  RedisHash.cpp  Util.cpp
 SRCS=$(wildcard *.cpp)
 
+OBJS=libredis_client.a
 
-libredis_client.a: $(SRCS:.cpp=.o)
+$(OBJS): $(SRCS:.cpp=.o)
 	$(AR) $(ARFLAGS) $@ $^
 
 
@@ -25,4 +26,4 @@ include $(SRCS:.cpp=.d)
 clean:
 	rm -f *.o *.d *.d.*
 cleanall:
-	rm -f *.o *.d *.d.* libredis_client.a
+	rm -f *.o *.d *.d.* $(OBJS)

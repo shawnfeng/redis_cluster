@@ -1,24 +1,31 @@
 include ../Makefile.mk
 
-#SRCS=libev.cpp  RedisClient.cpp  RedisEvent.cpp  RedisHash.cpp  Util.cpp
-SRCS=$(wildcard *.cpp)
-
 OBJS=liblogic_driver.a
 
-$(OBJS): $(SRCS:.cpp=.o)
+$(OBJS): LogicCore.o LogicConnLayerProto.pb.o PHandleSyn.o PHandleSynOk.o PHandleFin.o PHandleUpidx.o PHandleFinDelay.o
 	$(AR) $(ARFLAGS) $@ $^
 
+LogicCore.o: LogicCore.cpp LogicCore.h HookDef.h LogicConnLayerProto.pb.h PHandleBase.h
+	$(CC) $(CCFLAGS) LogicCore.cpp
 
-include $(SRCS:.cpp=.d)
+LogicConnLayerProto.pb.cc LogicConnLayerProto.pb.h: LogicConnLayerProto.proto
+	protoc  -I=. --cpp_out=. $^
+
+LogicConnLayerProto.pb.o: LogicConnLayerProto.pb.cc LogicConnLayerProto.pb.h
+	$(CC) $(CCFLAGS) LogicConnLayerProto.pb.cc
+
+PHandleSyn.o: PHandleSyn.cpp  PHandleBase.h
+	$(CC) $(CCFLAGS) PHandleSyn.cpp
+
+PHandleFin.o: PHandleFin.cpp  PHandleBase.h
+	$(CC) $(CCFLAGS) PHandleFin.cpp
+
+PHandleUpidx.o: PHandleUpidx.cpp  PHandleBase.h
+	$(CC) $(CCFLAGS) PHandleUpidx.cpp
 
 
-%.d: %.cpp
-	set -e; rm -f $@; \
-	$(CC) -MM $(CCFLAGS) $< > $@.$$$$; \
-	echo "	\$$(CC) \$$(CCFLAGS) $<" >> $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
-
+PHandleFinDelay.o: PHandleFinDelay.cpp  PHandleBase.h
+	$(CC) $(CCFLAGS) PHandleFinDelay.cpp
 
 
 

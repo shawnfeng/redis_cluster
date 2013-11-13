@@ -1,7 +1,12 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 
+#include "LogicConnLayerProto.pb.h"
+
+#include "PHandleBase.h"
+
 #include "LogicCore.h"
+
 
 
 using namespace std;
@@ -73,6 +78,50 @@ void LogicCore::start()
 }
 
 void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
+{
+  const char *fun = "LogicCore::from_sublayer";
+
+  ProHead pb;
+  if (!pb.ParseFromString(pro)) {
+    log_->error("%s-->error parser %s", fun, sublayer_index.c_str());
+    return;
+  }
+
+  int type = pb.type();
+
+  boost::shared_ptr<PHandleBase> ph;
+  switch (type) {
+  case ProHead::TYPE_SYN:
+    ph = boost::shared_ptr<PHandleBase>(new PHandleSyn);
+    break;
+
+  case ProHead::TYPE_SYNOK:
+    ph = boost::shared_ptr<PHandleBase>(new PHandleSynOk);
+    break;
+
+  case ProHead::TYPE_UPIDX:
+    ph = boost::shared_ptr<PHandleBase>(new PHandleUpidx);
+    break;
+
+  case ProHead::TYPE_FIN:
+    ph = boost::shared_ptr<PHandleBase>(new PHandleFin);
+    break;
+
+  case ProHead::TYPE_FIN_DELAY:
+    ph = boost::shared_ptr<PHandleBase>(new PHandleFinDelay);
+    break;
+
+
+  default:
+    log_->error("%s-->unknow msg type %d", fun, type);
+    return;
+  }
+
+  ph->process(this, sublayer_index, pb);
+
+}
+
+void LogicCore::from_sublayer_old(const string &sublayer_index, const string &pro)
 {
   const char *fun = "LogicCore::from_sublayer";
   if (pro.size() < PROTO_LEN_GLOBAL_HEAD) {

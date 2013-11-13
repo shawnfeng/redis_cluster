@@ -1,0 +1,101 @@
+
+message ProHead {
+	enum ProType {
+	     TYPE_SYN = 1;
+	     TYPE_SYNOK = 2;
+	     TYPE_FIN = 3;
+	     TYPE_FIN_DELAY = 4;
+	     TYPE_RESET = 5;
+	     TYPE_GATE_CUT = 6;
+	     TYPE_UPIDX = 7;
+
+	     TYPE_RE_MSG = 8;
+	     TYPE_UNRE_MSG = 9;
+
+	}
+
+	required int32 type = 1;
+
+	optional int64 conn = 2;
+
+	optional int32 sid =  3;
+	optional int32 rid =  4;
+
+	optional int64 uid =  5;
+
+	// 扩展数据
+	optional bytes sub_pro =  1001; // Tags in the range 16 through 2047 take two bytes
+
+}
+
+message ExtCliData {
+	required string key  = 1;
+	required bytes value = 2;
+}
+
+
+message ProSyn {
+	optional int32 cli_tp  = 1;
+	optional bytes cli_ver = 2;
+	optional bytes ticket  = 3;
+
+	repeated ExtCliData ext = 1001;
+}
+
+message ProSynOk {
+	optional int32 cli_tp  = 1;
+	optional bytes cli_ver = 2;
+
+
+	repeated ExtCliData ext = 1001;
+
+}
+
+message ProFin {
+
+
+}
+
+message ProGateCut {
+
+
+}
+
+message ProFinDelay {
+	optional int32 expire  = 1;
+
+}
+
+
+message ProReset {
+
+
+}
+
+message ProUpidx {
+	optional int32 cli_tp  = 1;
+	optional bytes cli_ver = 2;
+
+}
+
+
+
+message MsgData {
+	message Entry {
+		required int32 type  = 1;
+		required bytes data = 2;
+	}
+	repeated Entry entrys = 1;
+}
+
+
+message ProUnreMsg {
+	optional int32 comp_tp  = 1;
+	optional bytes msgs = 2;
+}
+
+message ProReMsg {
+	optional int32 comp_tp  = 1;
+	optional bytes msgs = 2;
+}
+

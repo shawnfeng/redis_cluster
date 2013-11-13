@@ -6,6 +6,8 @@
 #include "../logic_driver/LogicCore.h"
 
 #include "ZookeeperInit.h"
+
+#include "../logic_driver/LogicConnLayerProto.pb.h"
 using namespace std;
 
 const int INIT_SLEEP = 2;
@@ -114,6 +116,69 @@ void get_multi_test()
 
 }
 
+void synok_test()
+{
+  ProSynOk ps;
+  ps.set_cli_tp(100000);
+  ps.set_cli_ver("23.23");
+
+  ExtCliData *pecd = ps.add_ext();
+  pecd->set_key("aaa");
+  pecd->set_value("bbb");
+  pecd = ps.add_ext();
+  pecd->set_key("aaa1");
+  pecd->set_value("bbb1");
+
+
+
+  ProHead pb;
+  pb.set_type(ProHead::TYPE_SYNOK);
+  pb.set_conn(123456);
+  pb.set_sid(1);
+  pb.set_rid(0);
+  pb.set_uid(10);
+  string pro;
+  ps.SerializeToString(&pro);
+  pb.set_sub_pro(pro);
+
+  string sublayer_index = "adfasd/adfw";
+
+  pb.SerializeToString(&pro);
+  g_lc.from_sublayer(sublayer_index, pro);
+
+}
+
+void syn_test2()
+{
+  ProSyn ps;
+  ps.set_cli_tp(100000);
+  ps.set_cli_ver("23.23");
+  ps.set_ticket("fuck beauty");
+  ExtCliData *pecd = ps.add_ext();
+  pecd->set_key("aaa");
+  pecd->set_value("bbb");
+  pecd = ps.add_ext();
+  pecd->set_key("aaa1");
+  pecd->set_value("bbb1");
+
+
+
+  ProHead pb;
+  pb.set_type(ProHead::TYPE_SYN);
+  pb.set_conn(123456);
+  pb.set_sid(1);
+  pb.set_rid(0);
+  pb.set_uid(10);
+  string pro;
+  ps.SerializeToString(&pro);
+  pb.set_sub_pro(pro);
+
+  string sublayer_index = "adfasd/adfw";
+
+  pb.SerializeToString(&pro);
+  g_lc.from_sublayer(sublayer_index, pro);
+}
+
 void syn_test()
 {
   long uid = 10;
@@ -155,6 +220,62 @@ void fin_test()
   g_lc.from_sublayer(sublayer_index, pro);
 
 }
+
+void fin_test2()
+{
+
+  long conn_idx = 23421345;
+  int sendidx = 1;
+  int recvidx = 0;
+  long uid = 10;
+
+  ProHead ph;
+  ph.set_type(ProHead::TYPE_FIN);
+  ph.set_conn(conn_idx);
+  ph.set_sid(sendidx);
+  ph.set_rid(recvidx);
+  ph.set_uid(uid);
+
+  string sublayer_index = "adfasd/adfw";
+  string pro;
+  ph.SerializeToString(&pro);
+
+  g_lc.from_sublayer(sublayer_index, pro);
+
+}
+
+void fin_delay_test2()
+{
+
+  long conn_idx = 23421345;
+  int sendidx = 1;
+  int recvidx = 0;
+  long uid = 10;
+
+  int delay = time(NULL) + 10;
+
+  ProFinDelay ps;
+  ps.set_expire(delay);
+
+  ProHead ph;
+  ph.set_type(ProHead::TYPE_FIN_DELAY);
+  ph.set_conn(conn_idx);
+  ph.set_sid(sendidx);
+  ph.set_rid(recvidx);
+  ph.set_uid(uid);
+
+  string pro;
+  ps.SerializeToString(&pro);
+  ph.set_sub_pro(pro);
+
+
+  string sublayer_index = "adfasd/adfw";
+  ph.SerializeToString(&pro);
+  g_lc.from_sublayer(sublayer_index, pro);
+
+}
+
+
 
 void fin_delay_test()
 {
@@ -224,13 +345,48 @@ void upidx_test()
 }
 
 
+void upidx_test2()
+{
+  long conn_idx = 23421345;
+  long uid = 10;
+  //int cli_tp = 100000;
+  int cli_tp = 100;
+  string sublayer_index = "adfasd/adfw_up";
+
+
+  int sendidx = 1;
+  int recvidx = 0;
+
+
+  ProUpidx ps;
+  ps.set_cli_tp(cli_tp);
+
+  ProHead ph;
+  ph.set_type(ProHead::TYPE_UPIDX);
+  ph.set_conn(conn_idx);
+  ph.set_sid(sendidx);
+  ph.set_rid(recvidx);
+  ph.set_uid(uid);
+
+  string pro;
+  ps.SerializeToString(&pro);
+  ph.set_sub_pro(pro);
+
+  ph.SerializeToString(&pro);
+  g_lc.from_sublayer(sublayer_index, pro);
+
+}
+
+
 void *logic_driver_thread_cb(void* args)
 {
   for (int i = 0; i < THREAD_CB_RUN_TIMES; ++i) {
     //syn_test();
-    //upidx_test();
-    fin_test();
-    //fin_delay_test();
+    //syn_test2();
+    //synok_test();
+    //upidx_test2();
+    //fin_test2();
+    fin_delay_test2();
     //get_multi_test();
     sleep(1);
   }
@@ -358,7 +514,7 @@ int main (int argc, char **argv)
 		pthread_join(pids[i],NULL);
 	}
 
-  pause();
+  //pause();
 
 
 	return 0;
