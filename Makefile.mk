@@ -10,7 +10,7 @@ PROTOBUF_PATH=/usr/local/distcache-dev
 # ============
 CC=g++
 #CCFLAGS=-c -Wall -g -fPIC -I$(EVPATH)/include -I$(HIREDIS_PATH) -I$(ZKPATH)/include -I../src
-CCFLAGS=-c -Wall -g -fPIC -I$(EVPATH)/include -I$(HIREDIS_PATH) -I$(ZKPATH)/include -I$(PROTOBUF_PATH)/include/
+CCFLAGS=-c -Wall -g -fPIC -I$(EVPATH)/include -I$(HIREDIS_PATH) -I$(ZKPATH)/include -I$(PROTOBUF_PATH)/include
 AR=ar
 ARFLAGS=rcs
 

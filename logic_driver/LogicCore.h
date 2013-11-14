@@ -7,6 +7,7 @@
 
 #include "../src/Util.h"
 #include "HookDef.h"
+#include "LogicConnLayerProto.pb.h"
 
 class LogicCore {
 	LogOut *log_;
@@ -18,6 +19,8 @@ class LogicCore {
   hook_timeout_rm_fn timeout_rm_fn_;
   hook_offline_notify_fn offline_notify_fn_;
   hook_offline_notify_multi_fn offline_notify_multi_fn_;
+
+  hook_callstat_fn callstat_fn_;
 
 
  private:
@@ -36,7 +39,9 @@ class LogicCore {
            hook_upidx_fn upidx,
            hook_timeout_rm_fn timeout_rm,
            hook_offline_notify_fn offline_notify,
-           hook_offline_notify_multi_fn offline_notify_multi
+           hook_offline_notify_multi_fn offline_notify_multi,
+
+           hook_callstat_fn callstat
 
            ) :
   log_(log),
@@ -46,7 +51,9 @@ class LogicCore {
     upidx_fn_(upidx),
     timeout_rm_fn_(timeout_rm),
     offline_notify_fn_(offline_notify),
-    offline_notify_multi_fn_(offline_notify_multi)
+    offline_notify_multi_fn_(offline_notify_multi),
+
+    callstat_fn_(callstat)
 
   {
     start();
@@ -99,7 +106,7 @@ class LogicCore {
   int timeout_rm_fn(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs);
   int offline_notify_fn(long uid, std::string &cli_info);
   int offline_notify_multi_fn(std::vector< std::pair<long, std::string> > &rvs);
-
+  void callstat_fn(const char *stat_key, int tm, int rev);
   // interface
   void from_sublayer_old(const std::string &sublayer_index, const std::string &pro);
   void from_sublayer_synok(long uid, long conn, int cli_tp, const std::string &ver, const std::string &sublayer_index, const std::map<std::string, std::string> &data);

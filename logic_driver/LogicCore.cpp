@@ -48,6 +48,14 @@ int LogicCore::offline_notify_multi_fn(std::vector< std::pair<long, std::string>
   return offline_notify_multi_fn_ ? offline_notify_multi_fn_(rvs) : 0;
 }
 
+void LogicCore::callstat_fn(const char *stat_key, int tm, int rev)
+{
+  if (callstat_fn_) {
+    callstat_fn_(stat_key, tm, rev);
+  }
+
+}
+
 
 
 void LogicCore::check_timeout()
@@ -55,6 +63,8 @@ void LogicCore::check_timeout()
   const char *fun = "LogicCore::check_timeout";
   vector< pair<long, string> > rvs;
   for (;;) {
+    TimeUse tu;
+    const char *stat_key = "timeout_rm";
     rvs.clear();
     int rv = timeout_rm_fn(300, time(NULL), -1, rvs);
     //    log_->debug("%s-->rv:%d sz:%lu", rv, rvs.size());
@@ -66,6 +76,7 @@ void LogicCore::check_timeout()
     }
 
     log_->info("%s-->rm count %lu", fun, rvs.size());
+    callstat_fn(stat_key, tu.intv(), 0);
     sleep(1);
   }
 }
@@ -80,7 +91,8 @@ void LogicCore::start()
 void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
 {
   const char *fun = "LogicCore::from_sublayer";
-
+  TimeUse tu;
+  const char *stat_key = "unknown_proto";
   ProHead pb;
   if (!pb.ParseFromString(pro)) {
     log_->error("%s-->error parser %s", fun, sublayer_index.c_str());
@@ -93,37 +105,46 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
   switch (type) {
   case ProHead::TYPE_SYN:
     ph = boost::shared_ptr<PHandleBase>(new PHandleSyn);
+    stat_key = "syn";
     break;
 
   case ProHead::TYPE_SYNOK:
     ph = boost::shared_ptr<PHandleBase>(new PHandleSynOk);
+    stat_key = "synok";
     break;
 
   case ProHead::TYPE_UPIDX:
     ph = boost::shared_ptr<PHandleBase>(new PHandleUpidx);
+    stat_key = "upidx";
     break;
 
   case ProHead::TYPE_FIN:
     ph = boost::shared_ptr<PHandleBase>(new PHandleFin);
+    stat_key = "fin";
     break;
 
   case ProHead::TYPE_FIN_DELAY:
     ph = boost::shared_ptr<PHandleBase>(new PHandleFinDelay);
+    stat_key = "findelay";
     break;
 
 
   default:
     log_->error("%s-->unknow msg type %d", fun, type);
-    return;
+    break;
   }
 
-  ph->process(this, sublayer_index, pb);
+  if (ph) ph->process(this, sublayer_index, pb);
+
+  callstat_fn(stat_key, tu.intv(), 0);
 
 }
 
 void LogicCore::from_sublayer_old(const string &sublayer_index, const string &pro)
 {
   const char *fun = "LogicCore::from_sublayer";
+  TimeUse tu;
+  const char *stat_key = "unknown_proto";
   if (pro.size() < PROTO_LEN_GLOBAL_HEAD) {
     log_->error("%s->error len index:%s", fun, sublayer_index.c_str());
     return;
@@ -173,6 +194,7 @@ void LogicCore::from_sublayer_old(const string &sublayer_index, const string &pr
                     fun, uid, rv, head_len, conn_idx, pro_tp);
       }
     }
+    stat_key = "fin";
 
   } else if (PROTO_TYPE_FIN_DELAY == pro_tp) {
     if (pro.size() != PROTO_LEN_FIN_DELAY) {
@@ -197,7 +219,7 @@ void LogicCore::from_sublayer_old(const string &sublayer_index, const string &pr
                   fun, uid, rv, head_len, conn_idx, pro_tp);
     }
 
-
+    stat_key = "findelay";
   } else if (PROTO_TYPE_UPIDX == pro_tp) {
     if (pro.size() != PROTO_LEN_UPIDX) {
       log_->info("%s->error upidx head:%d conn:%lu tp:%d", fun, head_len, conn_idx, pro_tp);
@@ -226,7 +248,10 @@ void LogicCore::from_sublayer_old(const string &sublayer_index, const string &pr
                   fun, uid, rv, head_len, conn_idx, pro_tp);
     }
 
+    stat_key = "upidx";
+
   }
+  callstat_fn(stat_key, tu.intv(), 0);
 }
 
 int LogicCore::expire_stamp(int st, int cli_tp)
@@ -254,6 +279,9 @@ int LogicCore::expire_stamp(int st, int cli_tp)
 void LogicCore::from_sublayer_synok(long uid, long conn, int cli_tp, const string &ver, const string &sublayer_index, const map<string, string> &data)
 {
   const char *fun = "LogicCore::from_sublayer_synok";
+  TimeUse tu;
+  const char *stat_key = "synok";
+
   proto_syn p;
   p.head.logic_conn = conn;
   p.head.idx.send_idx = 1;
@@ -282,6 +310,8 @@ void LogicCore::from_sublayer_synok(long uid, long conn, int cli_tp, const strin
   if (rv) {
     log_->error("%s-->%ld %d %s syn fail!", fun, uid, cli_tp, sublayer_index.c_str());
   }
+
+  callstat_fn(stat_key, tu.intv(), 0);
 }
 
 

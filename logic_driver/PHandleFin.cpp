@@ -7,14 +7,14 @@ using namespace std;
 void PHandleFin::process(LogicCore *lc, const std::string &sublayer_index, const ProHead &ph)
 {
   const char *fun = "PHandleFin::process";
-  lc->log()->info("%s-->%s %s", fun, sublayer_index.c_str(), ph.DebugString().c_str());
+  //lc->log()->info("%s-->%s %s", fun, sublayer_index.c_str(), ph.DebugString().c_str());
 
   ProFin ps;
   if (!ps.ParseFromString(ph.sub_pro())) {
     lc->log()->error("%s-->error parser %s", fun, sublayer_index.c_str());
   }
 
-  lc->log()->info("%s-->%s %s", fun, sublayer_index.c_str(), ps.DebugString().c_str());
+  //lc->log()->info("%s-->%s %s", fun, sublayer_index.c_str(), ps.DebugString().c_str());
 
 
   long conn_idx = ph.conn();

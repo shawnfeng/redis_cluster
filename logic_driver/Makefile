@@ -17,6 +17,9 @@ LogicConnLayerProto.pb.o: LogicConnLayerProto.pb.cc LogicConnLayerProto.pb.h
 PHandleSyn.o: PHandleSyn.cpp  PHandleBase.h
 	$(CC) $(CCFLAGS) PHandleSyn.cpp
 
+PHandleSynOk.o: PHandleSynOk.cpp  PHandleBase.h
+	$(CC) $(CCFLAGS) PHandleSynOk.cpp
+
 PHandleFin.o: PHandleFin.cpp  PHandleBase.h
 	$(CC) $(CCFLAGS) PHandleFin.cpp
 

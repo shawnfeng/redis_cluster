@@ -8,14 +8,14 @@ using namespace google::protobuf;
 void PHandleSynOk::process(LogicCore *lc, const std::string &sublayer_index, const ProHead &ph)
 {
   const char *fun = "PHandleSynOk::process";
-  lc->log()->info("%s-->%s %s", fun, sublayer_index.c_str(), ph.DebugString().c_str());
+  //lc->log()->info("%s-->%s %s", fun, sublayer_index.c_str(), ph.DebugString().c_str());
 
   ProSynOk ps;
   if (!ps.ParseFromString(ph.sub_pro())) {
     lc->log()->error("%s-->error parser %s", fun, sublayer_index.c_str());
   }
 
-  lc->log()->info("%s-->%s %s", fun, sublayer_index.c_str(), ps.DebugString().c_str());
+  //lc->log()->info("%s-->%s %s", fun, sublayer_index.c_str(), ps.DebugString().c_str());
 
   proto_syn p;
   p.head.logic_conn = ph.conn();

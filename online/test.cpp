@@ -85,9 +85,11 @@ int hook_offline_notify_multi(std::vector< std::pair<long, std::string> > &rvs)
 
 
 
+
+
 //int hook_upidx_fn(int timeout, long uid, const proto_heart &proto);
   LogicCore g_lc(&g_log, hook_syn, hook_fin, hook_fin_delay, hook_upidx, hook_timeout_rm,
-                 hook_offline_notify, hook_offline_notify_multi);
+                 hook_offline_notify, hook_offline_notify_multi, NULL);
 
 void get_multi_test()
 {

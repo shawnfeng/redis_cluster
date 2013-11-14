@@ -112,5 +112,8 @@ typedef int (*hook_timeout_rm_fn)(int timeout, int stamp, int count, std::vector
 typedef int (*hook_offline_notify_fn)(long uid, std::string &cli_info);
 typedef int (*hook_offline_notify_multi_fn)(std::vector< std::pair<long, std::string> > &rvs);
 
+// stat
+typedef void (*hook_callstat_fn)(const char *stat_key, int tm, int rev);
+
 
 #endif
