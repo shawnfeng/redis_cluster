@@ -16,11 +16,12 @@ struct cmd_arg_t {
 struct cmd_async_arg_t {
 	RedisRvs rv;
   void *data;
-  void (*callback)(const RedisRvs &, void *);
+  void (*callback)(const RedisRvs &, double, bool, void *);
+  double call_stamp;
   double timeout;
   map<uint64_t, RedisRv> err;
-	cmd_async_arg_t(void *d, void (*c)(const RedisRvs &, void *), double to)
-    : data(d), callback(c), timeout(to) {}
+	cmd_async_arg_t(void *d, void (*c)(const RedisRvs &, double, bool, void *), double cs, double to)
+    : data(d), callback(c), call_stamp(cs), timeout(to) {}
 };
 
 
@@ -189,7 +190,7 @@ static void redis_cmd_async_cb(redisAsyncContext *c, void *r, void *data)
     u->re()->async_erase(carg->timeout, cf);
 		log->trace("%s-->over cmd and callback", fun);
     if (carg->callback) {
-      carg->callback(carg->rv, carg->data);
+      carg->callback(carg->rv, ev_now(EV_DEFAULT) - carg->call_stamp, false, carg->data);
       delete carg;
     }
 	}
@@ -308,11 +309,11 @@ void RedisEvent::connect(uint64_t addr)
 
 }
 
-void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, void *),
+void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, double, bool, void *),
                            const char *log_key,
                            const std::map< uint64_t, std::vector<std::string> > &addr_cmd,
-                           double timeout,
-                           const std::string &lua_code, bool iseval
+                           double timeout
+                           //                           const std::string &lua_code, bool iseval
                            )
 {
 	const char *fun = "RedisEvent::cmd_async";
@@ -323,9 +324,10 @@ void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, void *
 		return;
 	}
 
-  double tmout = ev_now(EV_DEFAULT) + timeout;
+  double call_stamp = ev_now(EV_DEFAULT);
+  double tmout = call_stamp + timeout;
 	userdata_t *u = &ud_;
-  cmd_async_arg_t *carg = new cmd_async_arg_t(data, callback, tmout);
+  cmd_async_arg_t *carg = new cmd_async_arg_t(data, callback, call_stamp, tmout);
 	cflag_t *cf = NULL;
 
   // ==========lock==================
@@ -356,7 +358,7 @@ void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, void *
       argv[i] = args[i].c_str();
       argvlen[i] = args[i].size();
     }
-
+    /*
     if (iseval) {
       argv[0] = "EVAL";
       argv[1] = lua_code.c_str();
@@ -365,6 +367,7 @@ void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, void *
         argvlen[1] = lua_code.size();
       }
     }
+    */
     //----------------------
 
     const uint64_t &ad = it->first;
@@ -395,7 +398,7 @@ void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, void *
     cf->set_d((void *)carg);
   } else {
     if (callback) {
-      callback(carg->rv, data);
+      callback(carg->rv, 0.0, false, data);
       delete carg;
     }
   }
@@ -660,17 +663,17 @@ void RedisRv::dump(LogOut *logout, const char *pref, int lv, int depth) const
 
 void AsynReqCheck::timeout_callback(double stamp)
 {
-  const char *fun = "AsynReqCheck::timeout_callback";
+  //  const char *fun = "AsynReqCheck::timeout_callback";
   multimap<double, cflag_t *>::iterator max = req_.begin();
-      printf("%s-->ev_now=%lf %lu\n", fun, stamp, req_.size());
+  //printf("%s-->ev_now=%lf %lu\n", fun, stamp, req_.size());
   for ( ;max != req_.end(); max = req_.begin()) {
     if (stamp > max->first) {
-      printf("%s-->timeout=%lf\n", fun, max->first);
+      //printf("%s-->timeout=%lf\n", fun, max->first);
       cflag_t *cf = max->second;
       req_.erase(max);
 
       if (cf->f() == 0 || cf->d() == NULL) {
-        printf("%s-->cf->f=%d return\n", fun, cf->f());
+        //printf("%s-->cf->f=%d return\n", fun, cf->f());
         continue;
       }
 
@@ -678,9 +681,9 @@ void AsynReqCheck::timeout_callback(double stamp)
       assert(carg);
       cf->reset();
 
-      printf("%s-->over cmd and callback\n", fun);
+      //printf("%s-->over cmd and callback\n", fun);
       if (carg->callback) {
-        carg->callback(carg->rv, carg->data);
+        carg->callback(carg->rv, stamp - carg->call_stamp, true, carg->data);
         delete carg;
       }
 

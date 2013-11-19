@@ -71,12 +71,12 @@ class AsynReqCheck {
   std::multimap<double, cflag_t *> req_;
  public:
   void insert(double stamp, cflag_t *cf) {
-    printf("AsynReqCheck::insert %lf %p\n", stamp, cf);
+    //printf("AsynReqCheck::insert %lf %p\n", stamp, cf);
     req_.insert(std::pair<double, cflag_t *>(stamp, cf)); 
   }
   void erase(double stamp, cflag_t *cf)
   {
-    printf("AsynReqCheck::erase %lf %p\n", stamp, cf);
+    //printf("AsynReqCheck::erase %lf %p\n", stamp, cf);
     std::pair <std::multimap<double, cflag_t *>::iterator, std::multimap<double, cflag_t *>::iterator> ret;
     ret = req_.equal_range(stamp);
 
@@ -152,11 +152,11 @@ class RedisEvent {
            const std::string &lua_code, bool iseval
            );
 
-	void cmd_async(void *data, void (*callback)(const RedisRvs &, void *),
+	void cmd_async(void *data, void (*callback)(const RedisRvs &, double, bool, void *),
            const char *log_key,
            const std::map< uint64_t, std::vector<std::string> > &addr_cmd,
-           double timeout,
-           const std::string &lua_code, bool iseval
+           double timeout
+                 //           const std::string &lua_code, bool iseval
            );
 
 	struct ev_loop *loop() { return loop_; }
