@@ -16,6 +16,11 @@ void PHandleSynOk::process(LogicCore *lc, const std::string &sublayer_index, con
   }
 
   //lc->log()->info("%s-->%s %s", fun, sublayer_index.c_str(), ps.DebugString().c_str());
+  long uid = ph.uid();
+  if (uid <= 0) {
+    lc->log()->warn("%s-->err uid:%ld", fun, uid);
+    return;
+  }
 
   proto_syn p;
   p.head.logic_conn = ph.conn();
@@ -37,7 +42,7 @@ void PHandleSynOk::process(LogicCore *lc, const std::string &sublayer_index, con
     kvs.push_back(it->value());
   }
 
-  long uid = ph.uid();
+
   proto_idx_pair ridx;
   int rv = lc->syn_fn(LogicCore::TIMEOUT_SYN, uid, p, ridx);
 

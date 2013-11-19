@@ -19,6 +19,11 @@ void PHandleUpidx::process(LogicCore *lc, const std::string &sublayer_index, con
   int expire = time(NULL);
   int cli_tp = ps.cli_tp();
     //log_->info("########### %d %d %ld", cli_tp, expire, uid);
+  if (uid <= 0) {
+    lc->log()->warn("%s-->err uid:%ld", fun, uid);
+    return;
+  }
+
 
   proto_upidx pr;
   pr.head.logic_conn = conn_idx;

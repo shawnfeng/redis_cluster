@@ -16,6 +16,11 @@ void PHandleFinDelay::process(LogicCore *lc, const std::string &sublayer_index, 
   int sendidx = ph.sid();
   int recvidx = ph.rid();
   long uid = ph.uid();
+  if (uid <= 0) {
+    lc->log()->warn("%s-->err uid:%ld", fun, uid);
+    return;
+  }
+
 
   int expire = ps.expire();
 

@@ -21,6 +21,11 @@ void PHandleFin::process(LogicCore *lc, const std::string &sublayer_index, const
   int sendidx = ph.sid();
   int recvidx = ph.rid();
   long uid = ph.uid();
+  if (uid <= 0) {
+    lc->log()->warn("%s-->err uid:%ld", fun, uid);
+    return;
+  }
+
 
   proto_fin pr;
   pr.head.logic_conn = conn_idx;
