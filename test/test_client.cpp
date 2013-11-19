@@ -1,35 +1,74 @@
 #include <arpa/inet.h>
-#include "RedisClient.h"
+#include "../src/RedisEvent.h"
 
 using namespace std;
 
-static LogOut g_log;
+
+static LogOut g_log(LogOut::log_trace, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error);
+static RedisEvent g_re(&g_log);
+
+void callback(const RedisRvs &rv, void *data)
+{
+  g_log.info("############### rvsize:%lu", rv.size());
+	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+    const RedisRv &tmp = it->second; 
+    tmp.dump(&g_log, "out", 0);
+  }
+
+}
+
+void test_async()
+{
+  TimeUse tu;
+  RedisRvs rv;
+  map< uint64_t, vector<string> > addr_cmd;
+  uint64_t a = 2240545255613015845;
+  vector<string> cs;
+  cs.push_back("KEYS");
+  cs.push_back("*");
+  addr_cmd[a] = cs;
+  g_re.cmd_async(NULL, callback, "test_async", addr_cmd, 0.001, "", false);
+
+  g_log.info("##########tm:%lu", tu.intv());
+
+}
+
+void test_sync()
+{
+  RedisRvs rv;
+  map< uint64_t, vector<string> > addr_cmd;
+  uint64_t a = 2240545255613015845;
+  vector<string> cs;
+  cs.push_back("KEYS");
+  cs.push_back("U.*");
+  addr_cmd[a] = cs;
+  g_re.cmd(rv, "test", addr_cmd, 20, "", false);
+
+	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+    const RedisRv &tmp = it->second; 
+    tmp.dump(&g_log, "out", 0);
+  }
+
+
+
+}
 
 
 void *thread_cb(void* args)
-{  
-	RedisClient *rc = (RedisClient *)args;
-	vector<string> hash;
+{
+  for (int i = 0; i < 2; ++i) {
+    test_async();
 
-	for (int i = 0; i < 2; ++i) {
-		vector<string> vs;
-		rc->cmd(hash, "GET key0", 100, vs);
-
-		for (vector<string>::const_iterator it = vs.begin(); it != vs.end(); ++it) {
-			g_log.debug("=== %s ===", it->c_str());
-		}
-
-
-	}
+    sleep(1);
+  }
 
 	return NULL;
-
 }
 
 
 int main (int argc, char **argv)
 {
-
+  /*
 	//long ip = inet_addr("10.3.2.3");
 	//g_log.info("ip=%ld", ip);
 	g_log.info("ulong=%lu", sizeof(ulong));
@@ -47,35 +86,15 @@ int main (int argc, char **argv)
 
 	int64_ipv4(ipv4, buff, 100, port);
 	g_log.info("ip=%s,port=%d", buff, port);
-
+  */
 
 	//=================================
-	g_log.info("MAIN-->RediClient init");
-	RedisClient rc(LogOut::log_trace, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error,
-		       //		       "127.0.0.1:4180,127.0.0.1:4181,127.0.0.1:4182",
-		       "127.0.0.1:4180,127.0.0.1:4181,127.0.0.1:4182",
-		       "/tx/online/legal_nodes"
-		       );
 
-	rc.start();
-	sleep(2);
-	//pause();
-	/*
-	vector< pair<string, int> > ends;
-	ends.push_back(pair<string, int>("127.0.0.1", 10010));
-	ends.push_back(pair<string, int>("127.0.0.1", 10020));
-	ends.push_back(pair<string, int>("10.2.72.23", 10010));
 
-	rc.update_ends(ends);
-	*/
-	g_log.info("MAIN-->RedisClient start");
-	g_log.info("sleep ZZZ");
-	// ============================
-
-	pthread_t pids[2];
+	pthread_t pids[1];
 	int pn = (int)(sizeof(pids)/sizeof(pids[0]));
 	for (int i = 0; i < pn; ++i) {
-		if (pthread_create(&pids[i], NULL, thread_cb, (void *)&rc)) {
+		if (pthread_create(&pids[i], NULL, thread_cb, NULL)) {
 			printf("create thread error!\n");
 			return -1;  
 		}
@@ -88,7 +107,7 @@ int main (int argc, char **argv)
 
 
 	g_log.info("MAIN-->hold here");
-	pause();
+  //  pause();
 	
 	return 1;
 

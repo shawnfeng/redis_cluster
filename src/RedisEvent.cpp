@@ -13,6 +13,17 @@ struct cmd_arg_t {
 	cmd_arg_t(RedisRvs *r) : rv(r) {}
 };
 
+struct cmd_async_arg_t {
+	RedisRvs rv;
+  void *data;
+  void (*callback)(const RedisRvs &, void *);
+  double timeout;
+  map<uint64_t, RedisRv> err;
+	cmd_async_arg_t(void *d, void (*c)(const RedisRvs &, void *), double to)
+    : data(d), callback(c), timeout(to) {}
+};
+
+
 static void connect_cb(const redisAsyncContext *c, int status) {
 	redisLibevEvents *re = (redisLibevEvents *)c->ev.data;
 	//RedisEvent *rev = (RedisEvent *)re->data;
@@ -65,6 +76,19 @@ static void async_cb (EV_P_ ev_async *w, int revents)
 	//	puts("async_cb just used for the side effects");
 }
 
+static void periodic_check_cb(EV_P_ ev_timer *w, int revents)
+{
+  double now = ev_now(EV_DEFAULT);
+
+
+	userdata_t *u = (userdata_t *)ev_userdata(EV_DEFAULT);
+	assert(u && u->re());
+
+  u->re()->async_timeout(now);
+  
+  ev_timer_again (EV_DEFAULT, w);
+}
+
 
 static void l_release (EV_P)
 {
@@ -96,12 +120,12 @@ static void redisrvs_add(redisReply *rp, RedisRv &rv)
 
 }
 
-static void redisrp_redisrvs(redisReply *reply, cmd_arg_t &carg, uint64_t addr)
+static void redisrp_redisrvs(redisReply *reply, RedisRvs &rvs, map<uint64_t, RedisRv> &err, uint64_t addr)
 {
 	if (!reply) return;
 
-	RedisRvs &rvs = *carg.rv;
-  map<uint64_t, RedisRv> &err = carg.err;
+	//RedisRvs &rvs = *carg.rv;
+  //map<uint64_t, RedisRv> &err = carg.err;
 
   if (reply->type != REDIS_REPLY_ERROR) {
     RedisRvs::iterator it =
@@ -117,6 +141,60 @@ static void redisrp_redisrvs(redisReply *reply, cmd_arg_t &carg, uint64_t addr)
 
 }
 
+static void redis_cmd_async_cb(redisAsyncContext *c, void *r, void *data)
+{
+  const char *fun = "redis_cmd_async_cb";
+	redisLibevEvents *re = (redisLibevEvents *)c->ev.data;
+	// this point must alloc
+	cflag_t *cf = (cflag_t *)data;
+	assert(cf);
+	userdata_t *u = (userdata_t *)ev_userdata(EV_DEFAULT);
+	assert(u);
+	assert(u->re());
+	LogOut *log = u->re()->log();
+	assert(log);
+
+	log->trace("redis_cmd_cb-->cf=%p cf->f=%d cf->d=%p", cf, cf->f(), cf->d());
+
+	if (cf->f() == 0 || cf->d() == NULL) {
+		log->trace("%s-->cf->f=%d return", fun, cf->f());
+		return;
+	}
+
+
+	// check ok, can use cf->d() pointer
+	cmd_async_arg_t *carg = (cmd_async_arg_t *)cf->d();
+	assert(carg);
+
+
+	if (cf->d_f() == 0) {
+		log->trace("%s-->reset 0 cf=%p cf->f=%d cf->d=%p", fun, cf, cf->f(), cf->d());
+		cf->reset();
+	}
+
+	redisReply *reply = (redisReply *)r;
+	if (reply == NULL) {
+		log->error("%s-->reply null", fun);
+		goto cond;
+	}
+
+	log->trace("%s-->type:%d inter=%lld len:%d argv:%s ele:%lu ep:%p",
+             fun, reply->type, reply->integer, reply->len, reply->str, reply->elements, reply->element);
+
+  redisrp_redisrvs(reply, carg->rv, carg->err, re->addr);
+
+	//sleep(2);
+ cond:
+	if (cf->f() == 0) {
+    u->re()->async_erase(carg->timeout, cf);
+		log->trace("%s-->over cmd and callback", fun);
+    if (carg->callback) {
+      carg->callback(carg->rv, carg->data);
+      delete carg;
+    }
+	}
+
+}
 
 static void redis_cmd_cb(redisAsyncContext *c, void *r, void *data)
 {
@@ -159,7 +237,7 @@ static void redis_cmd_cb(redisAsyncContext *c, void *r, void *data)
 	log->trace("redis_cmd_cb-->type:%d inter=%lld len:%d argv:%s ele:%lu ep:%p",
 		   reply->type, reply->integer, reply->len, reply->str, reply->elements, reply->element);
 
-  redisrp_redisrvs(reply, *carg, re->addr);
+  redisrp_redisrvs(reply, *carg->rv, carg->err, re->addr);
 
 	//sleep(2);
  cond:
@@ -187,6 +265,10 @@ void RedisEvent::start()
 	log_->info("RedisEvent::start-->loop:%p", loop_);
 	ev_async_init (&async_w_, async_cb);
 	ev_async_start (loop_, &async_w_);
+
+  ev_init(&periodic_check_w_, periodic_check_cb);
+  periodic_check_w_.repeat = 0.005;
+  ev_timer_again(loop_, &periodic_check_w_);
 
 	//log_->info("now associate this with the loop");
 	ev_set_userdata (loop_, &ud_);
@@ -225,6 +307,103 @@ void RedisEvent::connect(uint64_t addr)
 	redisAsyncSetDisconnectCallback(c, disconnect_cb);
 
 }
+
+void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, void *),
+                           const char *log_key,
+                           const std::map< uint64_t, std::vector<std::string> > &addr_cmd,
+                           double timeout,
+                           const std::string &lua_code, bool iseval
+                           )
+{
+	const char *fun = "RedisEvent::cmd_async";
+
+	log_->debug("%s-->k:%s size:%lu", fun, log_key, addr_cmd.size());
+	if (addr_cmd.empty()) {
+		log_->warn("%s-->k:%s empty redis context", fun, log_key);
+		return;
+	}
+
+  double tmout = ev_now(EV_DEFAULT) + timeout;
+	userdata_t *u = &ud_;
+  cmd_async_arg_t *carg = new cmd_async_arg_t(data, callback, tmout);
+	cflag_t *cf = NULL;
+
+  // ==========lock==================
+  boost::mutex::scoped_lock lock(mutex_);
+
+	cf = u->get_cf();
+	if (cf->f() || cf->d()) {
+		log_->error("%s-->userdata have data!", fun);
+	}
+
+  req_check_.insert(tmout, cf);
+
+	int wsz = 0;
+	for (map< uint64_t, vector<string> >::const_iterator it = addr_cmd.begin();
+	     it != addr_cmd.end(); ++it) {
+
+    const vector<string> &args = it->second;
+    size_t argc = args.size();
+    // copy the args
+    if (argc >= ARGV_MAX_LEN) {
+      log_->error("%s-->args more size:%lu", fun, args.size());
+      continue;
+    }
+
+    const char **argv = cmd_argv_;
+    size_t *argvlen = cmd_argvlen_;
+    for (size_t i = 0; i < args.size(); ++i) {
+      argv[i] = args[i].c_str();
+      argvlen[i] = args[i].size();
+    }
+
+    if (iseval) {
+      argv[0] = "EVAL";
+      argv[1] = lua_code.c_str();
+      if (argvlen) {
+        argvlen[0] = 4;
+        argvlen[1] = lua_code.size();
+      }
+    }
+    //----------------------
+
+    const uint64_t &ad = it->first;
+		redisAsyncContext *c = u->lookup(ad);
+		if (NULL == c) {
+      log_->warn("%s-->add connection addr:%lu", fun, ad);
+			connect(ad);
+		} else {
+			redisLibevEvents *rd = (redisLibevEvents *)c->ev.data;
+			assert(rd);
+			log_->trace("%s-->c:%p e:%p st:%d", fun, ad, rd, rd->status);
+			if (1 == rd->status) {				
+				if (REDIS_ERR == redisAsyncCommandArgv(c, redis_cmd_async_cb, cf, argc, argv, argvlen)) {
+          log_->error("%s-->redisAsyncCommandArgv %s %p", fun, c->errstr, c);
+        } else {
+          wsz++;
+        }
+			} else {
+				log_->warn("%s-->connection is not ready c:%p", fun, c);
+			}
+
+		}
+
+	}
+
+  if (wsz > 0) {
+    cf->set_f(wsz);
+    cf->set_d((void *)carg);
+  } else {
+    if (callback) {
+      callback(carg->rv, data);
+      delete carg;
+    }
+  }
+
+	ev_async_send (loop_, &async_w_);
+
+}
+
 
 void RedisEvent::cmd(RedisRvs &rv,
                      const char *log_key,
@@ -476,4 +655,37 @@ void RedisRv::dump(LogOut *logout, const char *pref, int lv, int depth) const
     }
   }
 
+}
+
+
+void AsynReqCheck::timeout_callback(double stamp)
+{
+  const char *fun = "AsynReqCheck::timeout_callback";
+  multimap<double, cflag_t *>::iterator max = req_.begin();
+      printf("%s-->ev_now=%lf %lu\n", fun, stamp, req_.size());
+  for ( ;max != req_.end(); max = req_.begin()) {
+    if (stamp > max->first) {
+      printf("%s-->timeout=%lf\n", fun, max->first);
+      cflag_t *cf = max->second;
+      req_.erase(max);
+
+      if (cf->f() == 0 || cf->d() == NULL) {
+        printf("%s-->cf->f=%d return\n", fun, cf->f());
+        continue;
+      }
+
+      cmd_async_arg_t *carg = (cmd_async_arg_t *)cf->d();
+      assert(carg);
+      cf->reset();
+
+      printf("%s-->over cmd and callback\n", fun);
+      if (carg->callback) {
+        carg->callback(carg->rv, carg->data);
+        delete carg;
+      }
+
+    } else {
+      break;
+    }
+  }
 }

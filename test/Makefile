@@ -1,6 +1,7 @@
 include ../Makefile.mk
 
-test: test_client 1st zkdemo
+test: test_client
+# 1st zkdemo
 
 1st: 1st.o
 	$(CC) -o 1st -Wl,-rpath $(RPATH_EV) 1st.o -L$(RPATH_EV) -lev
