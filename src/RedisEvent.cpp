@@ -15,13 +15,14 @@ struct cmd_arg_t {
 
 struct cmd_async_arg_t {
 	RedisRvs rv;
+  long key;
   void *data;
-  void (*callback)(const RedisRvs &, double, bool, void *);
+  void (*callback)(const RedisRvs &, double, bool, long, void *);
   double call_stamp;
   double timeout;
   map<uint64_t, RedisRv> err;
-	cmd_async_arg_t(void *d, void (*c)(const RedisRvs &, double, bool, void *), double cs, double to)
-    : data(d), callback(c), call_stamp(cs), timeout(to) {}
+	cmd_async_arg_t(long k, void *d, void (*c)(const RedisRvs &, double, bool, long, void *), double cs, double to)
+    : key(k), data(d), callback(c), call_stamp(cs), timeout(to) {}
 };
 
 
@@ -190,7 +191,7 @@ static void redis_cmd_async_cb(redisAsyncContext *c, void *r, void *data)
     u->re()->async_erase(carg->timeout, cf);
 		log->trace("%s-->over cmd and callback", fun);
     if (carg->callback) {
-      carg->callback(carg->rv, ev_now(EV_DEFAULT) - carg->call_stamp, false, carg->data);
+      carg->callback(carg->rv, ev_now(EV_DEFAULT) - carg->call_stamp, false, carg->key, carg->data);
       delete carg;
     }
 	}
@@ -309,7 +310,7 @@ void RedisEvent::connect(uint64_t addr)
 
 }
 
-void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, double, bool, void *),
+void RedisEvent::cmd_async(long key, void *data, void (*callback)(const RedisRvs &, double, bool, long, void *),
                            const char *log_key,
                            const std::map< uint64_t, std::vector<std::string> > &addr_cmd,
                            double timeout
@@ -327,7 +328,7 @@ void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, double
   double call_stamp = ev_now(EV_DEFAULT);
   double tmout = call_stamp + timeout;
 	userdata_t *u = &ud_;
-  cmd_async_arg_t *carg = new cmd_async_arg_t(data, callback, call_stamp, tmout);
+  cmd_async_arg_t *carg = new cmd_async_arg_t(key, data, callback, call_stamp, tmout);
 	cflag_t *cf = NULL;
 
   // ==========lock==================
@@ -398,7 +399,7 @@ void RedisEvent::cmd_async(void *data, void (*callback)(const RedisRvs &, double
     cf->set_d((void *)carg);
   } else {
     if (callback) {
-      callback(carg->rv, 0.0, false, data);
+      callback(carg->rv, 0.0, false, carg->key, data);
       delete carg;
     }
   }
@@ -683,7 +684,7 @@ void AsynReqCheck::timeout_callback(double stamp)
 
       //printf("%s-->over cmd and callback\n", fun);
       if (carg->callback) {
-        carg->callback(carg->rv, stamp - carg->call_stamp, true, carg->data);
+        carg->callback(carg->rv, stamp - carg->call_stamp, true, carg->key, carg->data);
         delete carg;
       }
 

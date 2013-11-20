@@ -7,9 +7,10 @@ using namespace std;
 static LogOut g_log(LogOut::log_trace, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error);
 static RedisEvent g_re(&g_log);
 
-void callback(const RedisRvs &rv, double tm, bool istmout, void *data)
+void callback(const RedisRvs &rv, double tm, bool istmout, long key, void *data)
 {
-  g_log.info("############### tm:%lf istmout:%d data:%s rvsize:%lu", tm, istmout, (char *)data, rv.size());
+  g_log.info("############### tm:%lf istmout:%d key:%ld data:%s rvsize:%lu",
+             tm, istmout, key, (char *)data, rv.size());
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     const RedisRv &tmp = it->second; 
     tmp.dump(&g_log, "out", 0);
@@ -27,7 +28,7 @@ void test_async()
   cs.push_back("KEYS");
   cs.push_back("*");
   addr_cmd[a] = cs;
-  g_re.cmd_async((void *)"FUCK", callback, "test_async", addr_cmd, 0.01);
+  g_re.cmd_async(1222, (void *)"FUCK", callback, "test_async", addr_cmd, 1);
 
   g_log.info("##########tm:%lu", tu.intv());
 

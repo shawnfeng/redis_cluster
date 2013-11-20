@@ -152,7 +152,7 @@ class RedisEvent {
            const std::string &lua_code, bool iseval
            );
 
-	void cmd_async(void *data, void (*callback)(const RedisRvs &, double, bool, void *),
+	void cmd_async(long key, void *data, void (*callback)(const RedisRvs &, double, bool, long, void *),
            const char *log_key,
            const std::map< uint64_t, std::vector<std::string> > &addr_cmd,
            double timeout
