@@ -21,6 +21,7 @@ void PHandleFinDelay::process(LogicCore *lc, const std::string &sublayer_index, 
     return;
   }
 
+  lc->log()->info("%s-->U:%ld C:%ld G:%s", fun, uid, ph.conn(), sublayer_index.c_str());
 
   int expire = ps.expire();
 

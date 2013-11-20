@@ -402,7 +402,7 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count, std::vector< std::
 
 int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx)
 {
-  TimeUse tu;
+  //TimeUse tu;
   const char *fun = "OnlineCtrl::syn";
 
 
@@ -456,8 +456,8 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
   idx.recv_idx = tmp.element.at(1).integer;
 
   //	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
-	log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s cli_type:%d",
-             fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str(), proto.cli_type);
+	//log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s cli_type:%d",
+  //           fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str(), proto.cli_type);
 
 
   return 0;
@@ -465,7 +465,7 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
 
 int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
 {
-  TimeUse tu;
+  //TimeUse tu;
   const char *fun = "OnlineCtrl::fin_delay";
 
 
@@ -507,8 +507,8 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
 
 
   //	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
-	log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s",
-             fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str());
+	//log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s",
+  //           fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str());
 
 
   return 0;
@@ -517,7 +517,7 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
 
 int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &cli_info)
 {
-  TimeUse tu;
+  //TimeUse tu;
   const char *fun = "OnlineCtrl::fin";
 
 
@@ -559,8 +559,8 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
     cli_info = tmp.str;
   }
 
-	log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s",
-             fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str());
+	//log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s",
+  //           fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str());
 
   return rvt;
 
@@ -569,7 +569,7 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
 
 int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx)
 {
-  TimeUse tu;
+  //TimeUse tu;
   const char *fun = "OnlineCtrl::upidx";
 
 
@@ -627,8 +627,8 @@ int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx
 
 
   //	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
-	log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s cli_type:%d",
-             fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str(), proto.cli_type);
+	//log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s cli_type:%d",
+  //           fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str(), proto.cli_type);
 
 
   return 0;

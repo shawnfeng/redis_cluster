@@ -22,6 +22,8 @@ void PHandleSynOk::process(LogicCore *lc, const std::string &sublayer_index, con
     return;
   }
 
+  lc->log()->info("%s-->U:%ld C:%ld G:%s", fun, uid, ph.conn(), sublayer_index.c_str());
+
   proto_syn p;
   p.head.logic_conn = ph.conn();
   p.head.idx.send_idx = ph.sid();

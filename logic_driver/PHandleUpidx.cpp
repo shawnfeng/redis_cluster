@@ -24,6 +24,7 @@ void PHandleUpidx::process(LogicCore *lc, const std::string &sublayer_index, con
     return;
   }
 
+  lc->log()->info("%s-->U:%ld C:%ld G:%s", fun, uid, ph.conn(), sublayer_index.c_str());
 
   proto_upidx pr;
   pr.head.logic_conn = conn_idx;
