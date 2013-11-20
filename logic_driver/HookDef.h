@@ -114,6 +114,7 @@ typedef int (*hook_offline_notify_multi_fn)(std::vector< std::pair<long, std::st
 
 // stat
 typedef void (*hook_callstat_fn)(const char *stat_key, int tm, int rev);
+typedef double (*hook_time_now_fn)();
 
 
 #endif

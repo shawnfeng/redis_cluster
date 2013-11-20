@@ -55,7 +55,10 @@ void LogicCore::callstat_fn(const char *stat_key, int tm, int rev)
   }
 
 }
-
+int LogicCore::time_now_fn()
+{
+  return time_now_fn_ ? (int)time_now_fn_() : time(NULL);
+}
 
 
 void LogicCore::check_timeout()
@@ -66,7 +69,7 @@ void LogicCore::check_timeout()
     TimeUse tu;
     const char *stat_key = "timeout_rm";
     rvs.clear();
-    int rv = timeout_rm_fn(300, time(NULL), -1, rvs);
+    int rv = timeout_rm_fn(300, time_now_fn(), -1, rvs);
     //    log_->debug("%s-->rv:%d sz:%lu", rv, rvs.size());
     if (rv) {
       log_->error("%s-->timeout rm rv %d", fun, rv);
@@ -228,7 +231,7 @@ void LogicCore::from_sublayer_old(const string &sublayer_index, const string &pr
     int sendidx = stream_ltt_bit32(&p, PROTO_LEN_SENDIDX);
     int recvidx = stream_ltt_bit32(&p, PROTO_LEN_RECVIDX);
     long uid = stream_ltt_bit64(&p, PROTO_LEN_UID);
-    int expire = time(NULL);
+    int expire = time_now_fn();
     int cli_tp = stream_ltt_bit32(&p, PROTO_LEN_CLI_TYPE);
     //log_->info("########### %d %d %ld", cli_tp, expire, uid);
 
@@ -287,7 +290,7 @@ void LogicCore::from_sublayer_synok(long uid, long conn, int cli_tp, const strin
   p.head.idx.send_idx = 1;
   p.head.sublayer_index = sublayer_index;
 
-  int ns = time(NULL);
+  int ns = time_now_fn();
 
   //  p.expire = expire_stamp(ns, cli_tp);
   p.expire = ns;

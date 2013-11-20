@@ -125,6 +125,7 @@ class RedisEvent {
            const std::string &lua_code, bool iseval
            );
 	struct ev_loop *loop() { return loop_; }
+  double time_now() { return ev_now(EV_DEFAULT); }
 
 };
 

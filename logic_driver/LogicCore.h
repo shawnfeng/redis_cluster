@@ -21,6 +21,7 @@ class LogicCore {
   hook_offline_notify_multi_fn offline_notify_multi_fn_;
 
   hook_callstat_fn callstat_fn_;
+  hook_time_now_fn time_now_fn_;
 
 
  private:
@@ -41,7 +42,8 @@ class LogicCore {
            hook_offline_notify_fn offline_notify,
            hook_offline_notify_multi_fn offline_notify_multi,
 
-           hook_callstat_fn callstat
+           hook_callstat_fn callstat,
+           hook_time_now_fn time_now
 
            ) :
   log_(log),
@@ -53,7 +55,8 @@ class LogicCore {
     offline_notify_fn_(offline_notify),
     offline_notify_multi_fn_(offline_notify_multi),
 
-    callstat_fn_(callstat)
+    callstat_fn_(callstat),
+    time_now_fn_(time_now)
 
   {
     start();
@@ -107,6 +110,8 @@ class LogicCore {
   int offline_notify_fn(long uid, std::string &cli_info);
   int offline_notify_multi_fn(std::vector< std::pair<long, std::string> > &rvs);
   void callstat_fn(const char *stat_key, int tm, int rev);
+  int time_now_fn();
+
   // interface
   void from_sublayer_old(const std::string &sublayer_index, const std::string &pro);
   void from_sublayer_synok(long uid, long conn, int cli_tp, const std::string &ver, const std::string &sublayer_index, const std::map<std::string, std::string> &data);

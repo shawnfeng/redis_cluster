@@ -83,13 +83,17 @@ int hook_offline_notify_multi(std::vector< std::pair<long, std::string> > &rvs)
          return 0;
 }
 
+double hook_time_now()
+{
+  return g_re.time_now();
+}
 
 
 
 
 //int hook_upidx_fn(int timeout, long uid, const proto_heart &proto);
   LogicCore g_lc(&g_log, hook_syn, hook_fin, hook_fin_delay, hook_upidx, hook_timeout_rm,
-                 hook_offline_notify, hook_offline_notify_multi, NULL);
+                 hook_offline_notify, hook_offline_notify_multi, NULL, hook_time_now);
 
 void get_multi_test()
 {
@@ -254,7 +258,7 @@ void fin_delay_test2()
   int recvidx = 0;
   long uid = 10;
 
-  int delay = time(NULL) + 10;
+  int delay = 10;
 
   ProFinDelay ps;
   ps.set_expire(delay);
@@ -271,7 +275,7 @@ void fin_delay_test2()
   ph.set_sub_pro(pro);
 
 
-  string sublayer_index = "adfasd/adfw";
+  string sublayer_index = "adfasd/adfw_up";
   ph.SerializeToString(&pro);
   g_lc.from_sublayer(sublayer_index, pro);
 

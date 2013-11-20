@@ -16,7 +16,7 @@ void PHandleUpidx::process(LogicCore *lc, const std::string &sublayer_index, con
   int sendidx = ph.sid();
   int recvidx = ph.rid();
   long uid = ph.uid();
-  int expire = time(NULL);
+  int expire = lc->time_now_fn();
   int cli_tp = ps.cli_tp();
     //log_->info("########### %d %d %ld", cli_tp, expire, uid);
   if (uid <= 0) {

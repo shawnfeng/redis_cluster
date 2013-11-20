@@ -29,7 +29,7 @@ void PHandleFinDelay::process(LogicCore *lc, const std::string &sublayer_index, 
   pr.head.idx.send_idx = sendidx;
   pr.head.idx.recv_idx = recvidx;
   pr.head.sublayer_index = sublayer_index;
-  pr.expire = expire;
+  pr.expire = lc->time_now_fn() + expire;
 
   int rv = lc->fin_delay_fn(LogicCore::TIMEOUT_FIN_DELAY, uid, pr);
   if (rv) {

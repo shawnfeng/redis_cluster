@@ -27,7 +27,7 @@ void PHandleSynOk::process(LogicCore *lc, const std::string &sublayer_index, con
   p.head.idx.send_idx = ph.sid();
   p.head.sublayer_index = sublayer_index;
 
-  int ns = time(NULL);
+  int ns = lc->time_now_fn();
   p.expire = ns;
 
   p.cli_type = ps.cli_tp();
