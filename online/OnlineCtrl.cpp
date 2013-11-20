@@ -418,14 +418,7 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
   const script_t &script = s_syn_;
   
   vector<string> args;
-  args.push_back("EVALSHA");
-  args.push_back(script.sha1);
-  args.push_back("KEY_SUM");
-
-  args.push_back(suid);
-  int key_sum = proto.keys(args);
-  // update key sum
-  args[2] = boost::lexical_cast<string>(key_sum - 3);
+  gen_redis_args(REQ_SYN, suid, &proto, args);
 
   args.insert(args.end(), kvs.begin(), kvs.end());
 
@@ -463,6 +456,72 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
   return 0;
 }
 
+int OnlineCtrl::gen_proto_args(int tp, const void *proto, vector<string> &args)
+{
+  switch (tp) {
+  case REQ_SYN:
+    {
+      const proto_syn *p = (const proto_syn *)proto;
+      return p->keys(args);
+    }
+
+  case REQ_FIN:
+    {
+      const proto_fin *p = (const proto_fin *)proto;
+      return p->keys(args);
+    }
+
+  case REQ_FIN_DELAY:
+    {
+      const proto_fin_delay *p = (const proto_fin_delay *)proto;
+      return p->keys(args);
+    }
+  case REQ_UPIDX:
+    {
+      const proto_upidx *p = (const proto_upidx *)proto;
+      return p->keys(args);
+    }
+   
+  default:
+    return args.size();
+
+  }
+
+}
+
+void OnlineCtrl::gen_redis_args(int tp, const string &suid, const void *proto, vector<string> &args)
+{
+  // tp: 0 unknown, 1 syn, 2 fin, 3 fin_delay 4 upidx
+  script_t *script = NULL;
+  switch (tp) {
+  case REQ_SYN:
+    script = &s_syn_;
+    break;
+  case REQ_FIN:
+    script = &s_fin_;
+    break;
+  case REQ_FIN_DELAY:
+    script = &s_fin_delay_;
+    break;
+  case REQ_UPIDX:
+    script = &s_upidx_;
+    break;
+
+  default:
+    return;
+  }
+
+  args.push_back("EVALSHA");
+  args.push_back(script->sha1);
+  args.push_back("KEY_SUM");
+
+  args.push_back(suid);
+  int key_sum = gen_proto_args(tp, proto, args);
+  // update key sum
+  args[2] = boost::lexical_cast<string>(key_sum - 3);
+
+}
+
 int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
 {
   //TimeUse tu;
@@ -474,15 +533,7 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
   const script_t &script = s_fin_delay_;
   
   vector<string> args;
-  args.push_back("EVALSHA");
-  args.push_back(script.sha1);
-  args.push_back("KEY_SUM");
-
-  args.push_back(suid);
-  int key_sum = proto.keys(args);
-  // update key sum
-  args[2] = boost::lexical_cast<string>(key_sum - 3);
-
+  gen_redis_args(REQ_FIN_DELAY, suid, &proto, args);
 
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
@@ -526,15 +577,7 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
   const script_t &script = s_fin_;
   
   vector<string> args;
-  args.push_back("EVALSHA");
-  args.push_back(script.sha1);
-  args.push_back("KEY_SUM");
-
-  args.push_back(suid);
-  int key_sum = proto.keys(args);
-  // update key sum
-  args[2] = boost::lexical_cast<string>(key_sum - 3);
-
+  gen_redis_args(REQ_FIN, suid, &proto, args);
 
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
@@ -578,15 +621,7 @@ int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx
   const script_t &script = s_upidx_;
   
   vector<string> args;
-  args.push_back("EVALSHA");
-  args.push_back(script.sha1);
-  args.push_back("KEY_SUM");
-
-  args.push_back(suid);
-  int key_sum = proto.keys(args);
-  // update key sum
-  args[2] = boost::lexical_cast<string>(key_sum - 3);
-
+  gen_redis_args(REQ_UPIDX, suid, &proto, args);
 
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);

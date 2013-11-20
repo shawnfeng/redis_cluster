@@ -31,6 +31,16 @@ class OnlineCtrl {
   script_t s_fin_delay_;
   script_t s_upidx_;
 
+
+  enum {
+
+    REQ_SYN = 1,
+    REQ_FIN = 2,
+    REQ_FIN_DELAY = 3,
+    REQ_UPIDX = 4,
+
+  };
+
  private:
   void single_uid_commend(const char *fun,
                           int timeout,
@@ -40,6 +50,8 @@ class OnlineCtrl {
 
   void one_uid_session(long actor, const RedisRv &rv, std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions);
   void load_script(const std::string &path, script_t &scp);
+  int gen_proto_args(int tp, const void *proto, std::vector<std::string> &args);
+  void gen_redis_args(int tp, const std::string &suid, const void *proto, std::vector<std::string> &args);
  public:
  OnlineCtrl(
             LogOut *log,
@@ -56,6 +68,12 @@ class OnlineCtrl {
  int fin_delay(int timeout, long uid, const proto_fin_delay &proto);
  int upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx);
  int timeout_rm(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs);
+ // async interface
+ int syn_async(int timeout, long uid, const proto_syn &proto);
+ int fin_async(int timeout, long uid, const proto_fin &proto);
+ int fin_delay_async(int timeout, long uid, const proto_fin_delay &proto);
+ int upidx_async(int timeout, long uid, const proto_upidx &proto);
+
  // void msg(int timeout, long uid, const proto_msg &proto);
  //--------bussiness level interface--------------------
  // ...
