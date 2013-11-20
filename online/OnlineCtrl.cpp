@@ -400,6 +400,8 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count, std::vector< std::
 }
 
 
+
+
 int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx)
 {
   //TimeUse tu;
@@ -426,6 +428,19 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
 
+  return rv_check_syn(uid, rv, idx);
+
+	//log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s cli_type:%d",
+  //           fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str(), proto.cli_type);
+
+
+  return 0;
+}
+
+int OnlineCtrl::rv_check_syn(long uid, const RedisRvs &rv, proto_idx_pair &idx)
+{
+  const char *fun = "OnlineCtrl::rv_check_syn";
+
   if (rv.size() != 1) {
     log_->error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
     return 2;
@@ -448,13 +463,10 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
   idx.send_idx = tmp.element.at(0).integer;
   idx.recv_idx = tmp.element.at(1).integer;
 
-  //	log_->info("%s-->uid:%ld tm:%ld", fun, uid, tu.intv());
-	//log_->info("%s-->uid:%ld tm:%ld conn:%ld sublayer:%s cli_type:%d",
-  //           fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str(), proto.cli_type);
-
-
   return 0;
 }
+
+
 
 int OnlineCtrl::gen_proto_args(int tp, const void *proto, vector<string> &args)
 {
@@ -538,6 +550,13 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
 
+
+  return rv_check_fin_delay(uid, rv);
+}
+
+int OnlineCtrl::rv_check_fin_delay(long uid, const RedisRvs &rv)
+{
+  const char *fun = "OnlineCtrl::rv_check_fin_delay";
   if (rv.size() != 1) {
     log_->error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
     return 2;
@@ -566,6 +585,7 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
 
 }
 
+
 int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &cli_info)
 {
   //TimeUse tu;
@@ -581,6 +601,14 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
 
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
+
+  return rv_check_fin(uid, rv, cli_info);
+
+}
+
+int OnlineCtrl::rv_check_fin(long uid, const RedisRvs &rv, std::string &cli_info)
+{
+  const char *fun = "OnlineCtrl::rv_check_fin";
 
   if (rv.size() != 1) {
     log_->error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
@@ -606,9 +634,9 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
   //           fun, uid, tu.intv(), proto.head.logic_conn, proto.head.sublayer_index.c_str());
 
   return rvt;
-
-
 }
+
+
 
 int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx)
 {
@@ -626,6 +654,12 @@ int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
 
+  return rv_check_upidx(uid, rv, idx);
+}
+
+int OnlineCtrl::rv_check_upidx(long uid, const RedisRvs &rv, proto_idx_pair &idx)
+{
+  const char *fun = "OnlineCtrl::rv_check_upidx";
   if (rv.size() != 1) {
     log_->error("%s-->%ld retrun size error %lu", fun, uid, rv.size());
     return 2;
@@ -667,5 +701,5 @@ int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx
 
 
   return 0;
-
 }
+

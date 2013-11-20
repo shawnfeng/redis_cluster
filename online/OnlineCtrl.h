@@ -52,6 +52,11 @@ class OnlineCtrl {
   void load_script(const std::string &path, script_t &scp);
   int gen_proto_args(int tp, const void *proto, std::vector<std::string> &args);
   void gen_redis_args(int tp, const std::string &suid, const void *proto, std::vector<std::string> &args);
+
+  int rv_check_syn(long uid, const RedisRvs &rv, proto_idx_pair &idx);
+  int rv_check_fin(long uid, const RedisRvs &rv, std::string &cli_info);
+  int rv_check_fin_delay(long uid, const RedisRvs &rv);
+  int rv_check_upidx(long uid, const RedisRvs &rv, proto_idx_pair &idx);
  public:
  OnlineCtrl(
             LogOut *log,
