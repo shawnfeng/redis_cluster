@@ -32,14 +32,6 @@ class OnlineCtrl {
   script_t s_upidx_;
 
 
-  enum {
-
-    REQ_SYN = 1,
-    REQ_FIN = 2,
-    REQ_FIN_DELAY = 3,
-    REQ_UPIDX = 4,
-
-  };
 
  private:
   void single_uid_commend(const char *fun,
@@ -48,15 +40,18 @@ class OnlineCtrl {
                           const std::string &lua_code,
                           RedisRvs &rv);
 
+  void single_uid_commend_async(const char *fun,
+                                long uid,
+                                int type,
+                                double timeout,
+                                std::vector<std::string> &args
+                                );
+
   void one_uid_session(long actor, const RedisRv &rv, std::map< long, std::map< std::string, std::map<std::string, std::string> > > &uids_sessions);
   void load_script(const std::string &path, script_t &scp);
   int gen_proto_args(int tp, const void *proto, std::vector<std::string> &args);
-  void gen_redis_args(int tp, const std::string &suid, const void *proto, std::vector<std::string> &args);
+  void gen_redis_args(int tp, long suid, const void *proto, std::vector<std::string> &args);
 
-  int rv_check_syn(long uid, const RedisRvs &rv, proto_idx_pair &idx);
-  int rv_check_fin(long uid, const RedisRvs &rv, std::string &cli_info);
-  int rv_check_fin_delay(long uid, const RedisRvs &rv);
-  int rv_check_upidx(long uid, const RedisRvs &rv, proto_idx_pair &idx);
  public:
  OnlineCtrl(
             LogOut *log,
@@ -74,10 +69,10 @@ class OnlineCtrl {
  int upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx);
  int timeout_rm(int timeout, int stamp, int count, std::vector< std::pair<long, std::string> > &rvs);
  // async interface
- int syn_async(int timeout, long uid, const proto_syn &proto);
- int fin_async(int timeout, long uid, const proto_fin &proto);
- int fin_delay_async(int timeout, long uid, const proto_fin_delay &proto);
- int upidx_async(int timeout, long uid, const proto_upidx &proto);
+ int syn_async(double timeout, long uid, const proto_syn &proto);
+ int fin_async(double timeout, long uid, const proto_fin &proto);
+ int fin_delay_async(double timeout, long uid, const proto_fin_delay &proto);
+ int upidx_async(double timeout, long uid, const proto_upidx &proto);
 
  // void msg(int timeout, long uid, const proto_msg &proto);
  //--------bussiness level interface--------------------
@@ -97,6 +92,11 @@ class OnlineCtrl {
                  );
 
 
+  LogOut *log() { return log_; }
+  int rv_check_syn(long uid, const RedisRvs &rv, proto_idx_pair &idx);
+  int rv_check_fin(long uid, const RedisRvs &rv, std::string &cli_info);
+  int rv_check_fin_delay(long uid, const RedisRvs &rv);
+  int rv_check_upidx(long uid, const RedisRvs &rv, proto_idx_pair &idx);
 
 };
 

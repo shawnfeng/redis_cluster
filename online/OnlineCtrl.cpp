@@ -19,6 +19,12 @@ static const char *fin_ope = "/fin.lua";
 static const char *fin_delay_ope = "/fin_delay.lua";
 static const char *upidx_ope = "/upidx.lua";
 
+static const int REQ_SYN = 1;
+static const int REQ_FIN = 2;
+static const int REQ_FIN_DELAY = 3;
+static const int REQ_UPIDX = 4;
+
+typedef void (*cmd_cb_t)(const RedisRvs &, double, bool, long, void *);
 
 static bool check_sha1(const char *path, string &data, string &sha1)
 {
@@ -48,6 +54,62 @@ static bool check_sha1(const char *path, string &data, string &sha1)
 	return true;
  
 }
+
+static void cmd_cb_syn(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
+{
+  OnlineCtrl *me = (OnlineCtrl *)oc;
+
+  me->log()->info("tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+             tm, istmout, uid, oc, rv.size());
+	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+    const RedisRv &tmp = it->second; 
+    tmp.dump(me->log(), "out", 1);
+  }
+
+  //  proto_idx_pair idx;
+  //  me->rv_check_syn(uid, rv, idx);
+
+}
+
+static void cmd_cb_fin(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
+{
+  OnlineCtrl *me = (OnlineCtrl *)oc;
+
+  me->log()->info("tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+             tm, istmout, uid, oc, rv.size());
+	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+    const RedisRv &tmp = it->second; 
+    tmp.dump(me->log(), "out", 1);
+  }
+
+
+}
+
+static void cmd_cb_fin_delay(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
+{
+  OnlineCtrl *me = (OnlineCtrl *)oc;
+  me->log()->info("tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+             tm, istmout, uid, oc, rv.size());
+	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+    const RedisRv &tmp = it->second; 
+    tmp.dump(me->log(), "out", 1);
+  }
+
+}
+
+static void cmd_cb_upidx(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
+{
+  OnlineCtrl *me = (OnlineCtrl *)oc;
+  me->log()->info("tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+             tm, istmout, uid, oc, rv.size());
+	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+    const RedisRv &tmp = it->second; 
+    tmp.dump(me->log(), "out", 1);
+  }
+
+}
+
+
 
 void OnlineCtrl::load_script(const std::string &path, script_t &scp)
 {
@@ -89,6 +151,108 @@ OnlineCtrl::OnlineCtrl(
 
 
 }
+
+int OnlineCtrl::syn_async(double timeout, long uid, const proto_syn &proto)
+{
+  const char *fun = "OnlineCtrl::syn_async";
+  const vector<string> &kvs = proto.data;
+	size_t sz = kvs.size();
+	if (sz % 2 != 0) {
+		log_->error("kvs % 2 0 size:%lu", sz);
+		return 1;
+	}
+
+  vector<string> args;
+  gen_redis_args(REQ_SYN, uid, &proto, args);
+
+  args.insert(args.end(), kvs.begin(), kvs.end());
+
+  single_uid_commend_async(fun, uid, REQ_SYN, timeout, args);
+
+  return 0;
+}
+
+int OnlineCtrl::fin_async(double timeout, long uid, const proto_fin &proto)
+{
+  const char *fun = "OnlineCtrl::fin_async";
+  vector<string> args;
+  gen_redis_args(REQ_FIN, uid, &proto, args);
+
+  single_uid_commend_async(fun, uid, REQ_FIN, timeout, args);
+
+  return 0;
+
+}
+
+int OnlineCtrl::fin_delay_async(double timeout, long uid, const proto_fin_delay &proto)
+{
+  const char *fun = "OnlineCtrl::fin_delay_async";
+  vector<string> args;
+  gen_redis_args(REQ_FIN_DELAY, uid, &proto, args);
+
+  single_uid_commend_async(fun, uid, REQ_FIN_DELAY, timeout, args);
+
+  return 0;
+
+}
+
+int OnlineCtrl::upidx_async(double timeout, long uid, const proto_upidx &proto)
+{
+  const char *fun = "OnlineCtrl::upidx_async";
+  vector<string> args;
+  gen_redis_args(REQ_UPIDX, uid, &proto, args);
+
+  single_uid_commend_async(fun, uid, REQ_UPIDX, timeout, args);
+
+  return 0;
+}
+
+
+void OnlineCtrl::single_uid_commend_async(const char *fun,
+                                          long uid,
+                                          int type,
+                                          double timeout,
+                                          std::vector<std::string> &args
+                                          )
+{
+  uint64_t rd_addr = rh_->redis_addr_master(boost::lexical_cast<string>(uid));
+  if (!rd_addr) {
+    log_->error("%s-->error hash uid:%ld", fun, uid);
+    return;
+  }
+
+  map< uint64_t, vector<string> > addr_cmd;
+
+  addr_cmd.insert(pair< uint64_t, vector<string> >(rd_addr, vector<string>())).first->second.swap(args);
+
+  cmd_cb_t cb = NULL;
+  if (REQ_SYN == type) {
+    cb = cmd_cb_syn;
+
+  } else if (REQ_FIN == type) {
+    cb = cmd_cb_fin;
+
+  } else if (REQ_FIN_DELAY == type) {
+    cb = cmd_cb_fin_delay;
+
+  } else if (REQ_UPIDX == type) {
+    cb = cmd_cb_upidx;
+
+  } else {
+    log_->error("%s-->fuck what do you want %ld!", fun, uid);
+    return;
+  }
+
+
+  re_->cmd_async(
+                 uid, this, cb,
+                 "sync",
+                 addr_cmd,
+                 timeout
+                 );
+
+}
+
 
 void OnlineCtrl::single_uid_commend(
                                     const char *fun,
@@ -420,7 +584,7 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
   const script_t &script = s_syn_;
   
   vector<string> args;
-  gen_redis_args(REQ_SYN, suid, &proto, args);
+  gen_redis_args(REQ_SYN, uid, &proto, args);
 
   args.insert(args.end(), kvs.begin(), kvs.end());
 
@@ -501,7 +665,7 @@ int OnlineCtrl::gen_proto_args(int tp, const void *proto, vector<string> &args)
 
 }
 
-void OnlineCtrl::gen_redis_args(int tp, const string &suid, const void *proto, vector<string> &args)
+void OnlineCtrl::gen_redis_args(int tp, long uid, const void *proto, vector<string> &args)
 {
   // tp: 0 unknown, 1 syn, 2 fin, 3 fin_delay 4 upidx
   script_t *script = NULL;
@@ -527,7 +691,7 @@ void OnlineCtrl::gen_redis_args(int tp, const string &suid, const void *proto, v
   args.push_back(script->sha1);
   args.push_back("KEY_SUM");
 
-  args.push_back(suid);
+  args.push_back(boost::lexical_cast<string>(uid));
   int key_sum = gen_proto_args(tp, proto, args);
   // update key sum
   args[2] = boost::lexical_cast<string>(key_sum - 3);
@@ -545,7 +709,7 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
   const script_t &script = s_fin_delay_;
   
   vector<string> args;
-  gen_redis_args(REQ_FIN_DELAY, suid, &proto, args);
+  gen_redis_args(REQ_FIN_DELAY, uid, &proto, args);
 
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
@@ -597,7 +761,7 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
   const script_t &script = s_fin_;
   
   vector<string> args;
-  gen_redis_args(REQ_FIN, suid, &proto, args);
+  gen_redis_args(REQ_FIN, uid, &proto, args);
 
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);
@@ -649,7 +813,7 @@ int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx
   const script_t &script = s_upidx_;
   
   vector<string> args;
-  gen_redis_args(REQ_UPIDX, suid, &proto, args);
+  gen_redis_args(REQ_UPIDX, uid, &proto, args);
 
 	RedisRvs rv;  
   single_uid_commend(fun, timeout, suid, args, script.data, rv);

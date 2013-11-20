@@ -40,24 +40,36 @@ OnlineCtrl g_oc(&g_log,
 
 int hook_syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx)
 {
-  return g_oc.syn(timeout, uid, proto, idx);
+  //return g_oc.syn(timeout, uid, proto, idx);
+  g_oc.syn_async(timeout, uid, proto);
+  return 0;
 }
 
 int hook_upidx(int timeout, long uid, const proto_upidx &proto, proto_idx_pair &idx)
 {
+  /*
   int rv = g_oc.upidx(timeout, uid, proto, idx);
   g_log.info("hook_upidx-->rv:%d, sid:%d rid:%d", rv, idx.send_idx, idx.recv_idx);
   return rv;
+  */
+
+  g_oc.upidx_async(timeout, uid, proto);
+
+  return 0;
 }
 
 int hook_fin(int timeout, long uid, const proto_fin &proto, std::string &cli_info)
 {
-  return g_oc.fin(timeout, uid, proto, cli_info);
+  //  return g_oc.fin(timeout, uid, proto, cli_info);
+  g_oc.fin_async(timeout, uid, proto);
+  return 0;
 }
 
 int hook_fin_delay(int timeout, long uid, const proto_fin_delay &proto)
 {
-  return g_oc.fin_delay(timeout, uid, proto);
+  //return g_oc.fin_delay(timeout, uid, proto);
+  g_oc.fin_delay_async(timeout, uid, proto);
+  return 0;
 }
 
 
@@ -391,8 +403,8 @@ void *logic_driver_thread_cb(void* args)
     //syn_test2();
     //synok_test();
     //upidx_test2();
-    //fin_test2();
-    fin_delay_test2();
+    fin_test2();
+    //fin_delay_test2();
     //get_multi_test();
     sleep(1);
   }
