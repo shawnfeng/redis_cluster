@@ -19,11 +19,6 @@ static const char *fin_ope = "/fin.lua";
 static const char *fin_delay_ope = "/fin_delay.lua";
 static const char *upidx_ope = "/upidx.lua";
 
-static const int REQ_SYN = 1;
-static const int REQ_FIN = 2;
-static const int REQ_FIN_DELAY = 3;
-static const int REQ_UPIDX = 4;
-
 
 typedef void (*cmd_cb_t)(const RedisRvs &, double, bool, long, void *);
 
@@ -56,6 +51,13 @@ static bool check_sha1(const char *path, string &data, string &sha1)
  
 }
 
+static void stat_out_cb(void *oc)
+{
+  OnlineCtrl *me = (OnlineCtrl *)oc;
+  me->log()->info("stat out %p:", oc);
+  me->stat_cb_out();
+
+}
 
 static void cmd_cb_syn(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
 {
@@ -64,6 +66,8 @@ static void cmd_cb_syn(const RedisRvs &rv, double tm, bool istmout, long uid, vo
     me->log()->warn("cmd_cb_syn tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
                     tm, istmout, uid, oc, rv.size());
   }
+
+  me->stat_cb_add(REQ_SYN, tm, istmout);
 
   me->check_scritp_load(REQ_SYN, rv);
   proto_idx_pair idx;
@@ -79,6 +83,7 @@ static void cmd_cb_fin(const RedisRvs &rv, double tm, bool istmout, long uid, vo
                     tm, istmout, uid, oc, rv.size());
   }
 
+  me->stat_cb_add(REQ_FIN, tm, istmout);
   me->check_scritp_load(REQ_FIN, rv);
   string cli_info;
   me->rv_check_fin(uid, rv, cli_info);
@@ -93,7 +98,7 @@ static void cmd_cb_fin_delay(const RedisRvs &rv, double tm, bool istmout, long u
                     tm, istmout, uid, oc, rv.size());
   }
 
-
+  me->stat_cb_add(REQ_FIN_DELAY, tm, istmout);
   me->check_scritp_load(REQ_FIN_DELAY, rv);
   me->rv_check_fin_delay(uid, rv);
 }
@@ -105,6 +110,9 @@ static void cmd_cb_upidx(const RedisRvs &rv, double tm, bool istmout, long uid, 
     me->log()->warn("cmd_cb_upidx tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
                     tm, istmout, uid, oc, rv.size());
   }
+
+  me->stat_cb_add(REQ_UPIDX, tm, istmout);
+
   me->check_scritp_load(REQ_UPIDX, rv);
 
   proto_idx_pair idx;
@@ -174,10 +182,13 @@ OnlineCtrl::OnlineCtrl(
 
                        RedisEvent *re,
                        RedisHash *rh,
+                       stat_cb_t stat_cb,
 
                        const char *script_path
                        ) : log_(log),
                            re_(re), rh_(rh),
+                           stat_timer_(NULL),
+                           stat_cb_(stat_cb),
                            sp_(script_path)
 {
   //  re_->start();
@@ -195,7 +206,7 @@ OnlineCtrl::OnlineCtrl(
   load_script(sp_ + upidx_ope, s_upidx_);
 
 
-
+  //  stat_timer_ = re_->add_repeat_timer(this, stat_out_cb, 20);
 
 
 }

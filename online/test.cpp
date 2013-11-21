@@ -26,6 +26,13 @@ const char *zk_addr = "t87.xntalk.d.xiaonei.com:4180,t87.xntalk.d.xiaonei.com:41
 LogOut g_log(NULL, LogOut::log_debug, LogOut::log_info, LogOut::log_warn, LogOut::log_error);
 ZKinit g_zk(&g_log, zk_addr);
 
+static void stat_cb_out(const char *key, double accum, int calls, int tmouts, double max)
+{
+  g_log.info("%s %lf %d %d %lf", key, accum, calls, tmouts, max);
+}
+
+
+
 RedisEvent g_re(&g_log);
 RedisHash g_rh(&g_log,
                g_zk.handle(),
@@ -35,7 +42,7 @@ RedisHash g_rh(&g_log,
 OnlineCtrl g_oc(&g_log,
                 &g_re,
                 &g_rh,
-
+                stat_cb_out,
               "/data/home/guangxiang.feng/redis_cluster/script");
 
 int hook_syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx)
@@ -104,7 +111,7 @@ double hook_time_now()
 
 
 //int hook_upidx_fn(int timeout, long uid, const proto_heart &proto);
-  LogicCore g_lc(&g_log, hook_syn, hook_fin, hook_fin_delay, hook_upidx, hook_timeout_rm,
+LogicCore g_lc(&g_log, &g_oc, hook_syn, hook_fin, hook_fin_delay, hook_upidx, hook_timeout_rm,
                  hook_offline_notify, hook_offline_notify_multi, NULL, hook_time_now);
 
 void get_multi_test()
@@ -532,7 +539,7 @@ int main (int argc, char **argv)
 		pthread_join(pids[i],NULL);
 	}
 
-  //pause();
+  pause();
 
 
 	return 0;

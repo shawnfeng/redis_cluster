@@ -65,6 +65,7 @@ void LogicCore::check_timeout()
 {
   const char *fun = "LogicCore::check_timeout";
   vector< pair<long, string> > rvs;
+  int stat_cb_stamp = time_now_fn();
   for (;;) {
     TimeUse tu;
     const char *stat_key = "timeout_rm";
@@ -80,6 +81,13 @@ void LogicCore::check_timeout()
 
     log_->info("%s-->rm count %lu", fun, rvs.size());
     callstat_fn(stat_key, tu.intv(), 0);
+
+    int now = time_now_fn();
+    if (now-stat_cb_stamp >= 10) {
+      oc_->stat_cb_out();
+      stat_cb_stamp = now;
+    }
+
     sleep(1);
   }
 }

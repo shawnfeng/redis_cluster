@@ -6,11 +6,13 @@
 #include <map>
 
 #include "../src/Util.h"
+#include "../online/OnlineCtrl.h"
 #include "HookDef.h"
 #include "LogicConnLayerProto.pb.h"
 
 class LogicCore {
 	LogOut *log_;
+  OnlineCtrl *oc_;
 
   hook_syn_fn syn_fn_;
   hook_fin_fn fin_fn_;
@@ -33,7 +35,7 @@ class LogicCore {
   void start();
  public:
  LogicCore(LogOut *log,
-
+           OnlineCtrl *oc,
            hook_syn_fn syn,
            hook_fin_fn fin,
            hook_fin_delay_fn fin_delay,
@@ -47,6 +49,7 @@ class LogicCore {
 
            ) :
   log_(log),
+    oc_(oc),
     syn_fn_(syn),
     fin_fn_(fin),
     fin_delay_fn_(fin_delay),

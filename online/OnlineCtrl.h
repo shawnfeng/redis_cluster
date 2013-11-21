@@ -38,7 +38,110 @@ public:
   const std::string &lookup_sha1(RedisEvent *re);
 
 };
+enum {
+  REQ_SYN,
+  REQ_FIN,
+  REQ_FIN_DELAY,
+  REQ_UPIDX,
 
+  REQ_COUNT,
+};
+
+
+
+typedef void (*stat_cb_t)(const char *key, double accum, int calls, int tmouts, double max);
+class CallTimeStat {
+  struct stat_t {
+    double accum;
+    int calls;
+    int timeout;
+    double max;
+  stat_t() : accum(0.0), calls(0), timeout(0), max(0.0) {}
+    void clear()
+    {
+      accum = 0.0;
+      calls = 0;
+      timeout = 0;
+      max = 0.0;
+    }
+  };
+  std::map<std::string, stat_t> sts_;
+
+  stat_t v_sts_[REQ_COUNT];
+  const char *v_sts_key_[REQ_COUNT];
+ public:
+  CallTimeStat()
+    {
+      for (int i = 0; i < REQ_COUNT; ++i) {
+        if (REQ_SYN == i) {
+          v_sts_key_[i] = "redis.syn";
+        } else if (REQ_FIN == i) {
+          v_sts_key_[i] = "redis.fin";
+        } else if (REQ_FIN_DELAY == i) {
+          v_sts_key_[i] = "redis.fin_delay";
+        } else if (REQ_UPIDX == i) {
+          v_sts_key_[i] = "redis.upidx";
+        }
+      }
+    }
+  void stat2(int type, double tm, bool istmout)
+  {
+    if (type > REQ_COUNT) return;
+    stat_t &st = v_sts_[type];
+
+    ++st.calls;
+    st.accum += tm;
+    if (istmout) ++st.timeout;
+    if(st.max < tm) st.max = tm;
+
+  }
+
+  // same thread to run
+  void stat(const char *key, double tm, bool istmout)
+  {
+    std::map<std::string, stat_t>::iterator it = sts_.find(key);
+    if (it == sts_.end()) {
+      sts_[key] = stat_t();
+      it = sts_.begin();
+    }
+
+    stat_t &st = it->second;
+
+    ++st.calls;
+    st.accum += tm;
+    if (istmout) ++st.timeout;
+    if(st.max < tm) st.max = tm;
+
+  }
+
+  void show2(stat_cb_t cb)
+  {
+    for (int i = 0; i < REQ_COUNT; ++i) {
+      stat_t &st = v_sts_[i];
+      if (st.calls > 0) {
+        cb(v_sts_key_[i], st.accum, st.calls, st.timeout, st.max);
+        st.clear();
+      }
+
+    }
+  }
+
+
+  void show(stat_cb_t cb)
+  {
+    for (std::map<std::string, stat_t>::iterator it = sts_.begin();
+         it != sts_.end(); ++it) {
+      stat_t &st = it->second;
+      if (st.calls > 0) {
+        cb(it->first.c_str(), st.accum, st.calls, st.timeout, st.max);
+        st.clear();
+      }
+    }
+  }
+
+  
+
+};
 
 class OnlineCtrl {
 
@@ -46,6 +149,11 @@ class OnlineCtrl {
 	RedisEvent *re_;
 	RedisHash *rh_;
 
+  void *stat_timer_;
+  stat_cb_t stat_cb_;
+
+
+  CallTimeStat call_stat_;
 
   std::string sp_;
 
@@ -87,8 +195,16 @@ class OnlineCtrl {
             RedisEvent *re,
             RedisHash *rh,
 
+            stat_cb_t stat_cb,
             const char *script_path
+
             );
+
+ ~OnlineCtrl()
+   {
+     if (stat_timer_) re_->rm_repeat_timer(stat_timer_);
+   }
+
 
  //-------------------logic connection level interface-----------------------
  int syn(int timeout, long uid, const proto_syn &proto, proto_idx_pair &idx);
@@ -128,6 +244,15 @@ class OnlineCtrl {
 
   void check_scritp_load(int type, const RedisRvs &rv);
   void need_load_script(int type, uint64_t addr);
+
+  void stat_cb_add(int type, double tm, bool istmout)
+  {
+    call_stat_.stat2(type, tm, istmout);
+  }
+  void stat_cb_out()
+  {
+    call_stat_.show2(stat_cb_);
+  }
 
 };
 
