@@ -11,7 +11,7 @@
 using namespace std;
 
 const int INIT_SLEEP = 2;
-const int THREAD_CB_RUN_TIMES = 2;
+const int THREAD_CB_RUN_TIMES = 3;
 const int THREAD_NUMS = 1;
 
 const bool IS_GET_SESSIONS_INFO_TEST = true;
@@ -402,8 +402,8 @@ void *logic_driver_thread_cb(void* args)
     //syn_test();
     //syn_test2();
     //synok_test();
-    //upidx_test2();
-    fin_test2();
+    upidx_test2();
+    //fin_test2();
     //fin_delay_test2();
     //get_multi_test();
     sleep(1);

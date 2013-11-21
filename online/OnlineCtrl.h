@@ -8,11 +8,39 @@
 
 #include "../logic_driver/HookDef.h"
 
+class script_t {
+  std::string sha1_;
+  std::string data_;
+
+  bool need_load_;
+	boost::shared_mutex mux_;
+  std::set<uint64_t> addrs_;
+
+public:
+ script_t() : need_load_(false) {}
+
+  void set_scp(const char *s, const char *d)
+  {
+    sha1_ = s;
+    data_ = d;
+  }
+
+  void add(uint64_t addr)
+  {
+    boost::unique_lock< boost::shared_mutex > lock(mux_);
+    addrs_.insert(addr);
+    need_load_ = true;
+  }
+
+  const std::string &sha1() const { return sha1_; }
+  const std::string &data() const { return data_; }
+
+  const std::string &lookup_sha1(RedisEvent *re);
+
+};
+
+
 class OnlineCtrl {
-  struct script_t {
-    std::string sha1;
-    std::string data;
-  };
 
 	LogOut *log_;
 	RedisEvent *re_;
@@ -97,6 +125,9 @@ class OnlineCtrl {
   int rv_check_fin(long uid, const RedisRvs &rv, std::string &cli_info);
   int rv_check_fin_delay(long uid, const RedisRvs &rv);
   int rv_check_upidx(long uid, const RedisRvs &rv, proto_idx_pair &idx);
+
+  void check_scritp_load(int type, const RedisRvs &rv);
+  void need_load_script(int type, uint64_t addr);
 
 };
 

@@ -20,7 +20,7 @@ struct cmd_async_arg_t {
   void (*callback)(const RedisRvs &, double, bool, long, void *);
   double call_stamp;
   double timeout;
-  map<uint64_t, RedisRv> err;
+  //  map<uint64_t, RedisRv> err;
 	cmd_async_arg_t(long k, void *d, void (*c)(const RedisRvs &, double, bool, long, void *), double cs, double to)
     : key(k), data(d), callback(c), call_stamp(cs), timeout(to) {}
 };
@@ -143,6 +143,21 @@ static void redisrp_redisrvs(redisReply *reply, RedisRvs &rvs, map<uint64_t, Red
 
 }
 
+static void redisrp_redisrvs2(redisReply *reply, RedisRvs &rvs, uint64_t addr)
+{
+	if (!reply) return;
+
+	//RedisRvs &rvs = *carg.rv;
+  //map<uint64_t, RedisRv> &err = carg.err;
+
+  RedisRvs::iterator it =
+    rvs.insert(pair< uint64_t, RedisRv >(addr, RedisRv())).first;
+  redisrvs_add(reply, it->second);
+
+
+}
+
+
 static void redis_cmd_async_cb(redisAsyncContext *c, void *r, void *data)
 {
   const char *fun = "redis_cmd_async_cb";
@@ -183,7 +198,7 @@ static void redis_cmd_async_cb(redisAsyncContext *c, void *r, void *data)
 	log->trace("%s-->type:%d inter=%lld len:%d argv:%s ele:%lu ep:%p",
              fun, reply->type, reply->integer, reply->len, reply->str, reply->elements, reply->element);
 
-  redisrp_redisrvs(reply, carg->rv, carg->err, re->addr);
+  redisrp_redisrvs2(reply, carg->rv, re->addr);
 
 	//sleep(2);
  cond:

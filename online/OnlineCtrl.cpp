@@ -24,6 +24,7 @@ static const int REQ_FIN = 2;
 static const int REQ_FIN_DELAY = 3;
 static const int REQ_UPIDX = 4;
 
+
 typedef void (*cmd_cb_t)(const RedisRvs &, double, bool, long, void *);
 
 static bool check_sha1(const char *path, string &data, string &sha1)
@@ -55,19 +56,17 @@ static bool check_sha1(const char *path, string &data, string &sha1)
  
 }
 
+
 static void cmd_cb_syn(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
 {
   OnlineCtrl *me = (OnlineCtrl *)oc;
 
-  me->log()->info("tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+  me->log()->trace("cmd_cb_syn tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
              tm, istmout, uid, oc, rv.size());
-	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
-    const RedisRv &tmp = it->second; 
-    tmp.dump(me->log(), "out", 1);
-  }
 
-  //  proto_idx_pair idx;
-  //  me->rv_check_syn(uid, rv, idx);
+  me->check_scritp_load(REQ_SYN, rv);
+  proto_idx_pair idx;
+  me->rv_check_syn(uid, rv, idx);
 
 }
 
@@ -75,49 +74,93 @@ static void cmd_cb_fin(const RedisRvs &rv, double tm, bool istmout, long uid, vo
 {
   OnlineCtrl *me = (OnlineCtrl *)oc;
 
-  me->log()->info("tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+  me->log()->trace("cmd_cb_fin tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
              tm, istmout, uid, oc, rv.size());
-	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
-    const RedisRv &tmp = it->second; 
-    tmp.dump(me->log(), "out", 1);
-  }
 
+  me->check_scritp_load(REQ_FIN, rv);
+  string cli_info;
+  me->rv_check_fin(uid, rv, cli_info);
 
 }
 
 static void cmd_cb_fin_delay(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
 {
   OnlineCtrl *me = (OnlineCtrl *)oc;
-  me->log()->info("tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+  me->log()->trace("cmd_cb_fin_delay tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
              tm, istmout, uid, oc, rv.size());
-	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
-    const RedisRv &tmp = it->second; 
-    tmp.dump(me->log(), "out", 1);
-  }
 
+
+  me->check_scritp_load(REQ_FIN_DELAY, rv);
+  me->rv_check_fin_delay(uid, rv);
 }
 
 static void cmd_cb_upidx(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
 {
   OnlineCtrl *me = (OnlineCtrl *)oc;
-  me->log()->info("tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+  me->log()->trace("cmd_cb_upidx tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
              tm, istmout, uid, oc, rv.size());
-	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
-    const RedisRv &tmp = it->second; 
-    tmp.dump(me->log(), "out", 1);
-  }
+
+  me->check_scritp_load(REQ_UPIDX, rv);
+
+  proto_idx_pair idx;
+  me->rv_check_upidx(uid, rv, idx);
 
 }
 
 
+const std::string &script_t::lookup_sha1(RedisEvent *re)
+{
+  const char *fun = "script_t::lookup_sha1";
+  if (need_load_) {
+    set<uint64_t> addrs;
+    {
+      boost::unique_lock< boost::shared_mutex > lock(mux_);
+      addrs.swap(addrs_);
+    }
+
+    vector<string> cmds;
+    cmds.push_back("SCRIPT");
+    cmds.push_back("LOAD");
+    cmds.push_back(data_);
+
+    map< uint64_t, vector<string> > addr_cmd;
+    for (set<uint64_t>::const_iterator it = addrs.begin(); it != addrs.end(); ++it) {
+      addr_cmd[*it] = cmds;
+    }
+
+    if (!addr_cmd.empty()) {
+      RedisRvs rv;
+      re->cmd(rv, "loadscript", addr_cmd, 100, "", false);
+
+      for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
+        const RedisRv &tmp = it->second; 
+        tmp.dump(re->log(), fun, 2);
+      }
+
+
+      re->log()->warn("%s-->sha1:%s data:%s", fun, sha1_.c_str(), data_.c_str());
+    }
+
+
+    need_load_ = false;
+
+  }
+
+
+  return sha1_;
+}
+
 
 void OnlineCtrl::load_script(const std::string &path, script_t &scp)
 {
-	if (!check_sha1(path.c_str(), scp.data, scp.sha1)) {
+  string data, sha1;
+	if (!check_sha1(path.c_str(), data, sha1)) {
 		log_->error("%s error check sha1", path.c_str());
 	}
 
-	log_->info("data:%s sha1:%s", scp.data.c_str(), scp.sha1.c_str());
+  scp.set_scp(sha1.c_str(), data.c_str());
+
+	log_->info("data:%s sha1:%s", scp.data().c_str(), scp.sha1().c_str());
 
 }
 
@@ -207,6 +250,41 @@ int OnlineCtrl::upidx_async(double timeout, long uid, const proto_upidx &proto)
   return 0;
 }
 
+void OnlineCtrl::check_scritp_load(int type, const RedisRvs &rv)
+{
+  if (rv.size() == 1) {
+    const RedisRv &tmp = rv.begin()->second;
+    if (tmp.type == REDIS_REPLY_ERROR
+        && !strncmp(tmp.str.c_str(), "NOSCRIPT", 8)) {
+
+      need_load_script(type, rv.begin()->first);
+    }
+  }
+}
+
+
+
+void OnlineCtrl::need_load_script(int type, uint64_t addr)
+{
+  const char *fun = "OnlineCtrl::need_load_script";
+  if (REQ_SYN == type) {
+    s_syn_.add(addr);
+
+  } else if (REQ_FIN == type) {
+    s_fin_.add(addr);
+
+  } else if (REQ_FIN_DELAY == type) {
+    s_fin_delay_.add(addr);
+
+
+  } else if (REQ_UPIDX == type) {
+    s_upidx_.add(addr);
+
+  } else {
+    log_->error("%s-->fuck what do you want to load %d!", fun, type);
+  }
+
+}
 
 void OnlineCtrl::single_uid_commend_async(const char *fun,
                                           long uid,
@@ -294,14 +372,14 @@ void OnlineCtrl::get_sessions(int timeout, long uid, vector<string> &sessions)
 
   vector<string> args;
   args.push_back("EVALSHA");
-  args.push_back(s_sessions_.sha1);
+  args.push_back(s_sessions_.sha1());
   args.push_back("1");
   args.push_back(suid);
 
 
 	log_->debug("%s-->uid:%ld rv.size:%lu", fun, uid, rv.size());
 
-  single_uid_commend(fun, timeout, suid, args, s_sessions_.data, rv);  
+  single_uid_commend(fun, timeout, suid, args, s_sessions_.data(), rv);  
 
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     const RedisRv &tmp = it->second;
@@ -334,7 +412,7 @@ void OnlineCtrl::get_session_info(int timeout, long uid, const string &session, 
 
   vector<string> args;
   args.push_back("EVALSHA");
-  args.push_back(s_session_info_.sha1);
+  args.push_back(s_session_info_.sha1());
   args.push_back("2");
   args.push_back(suid);
   args.push_back(session);
@@ -342,7 +420,7 @@ void OnlineCtrl::get_session_info(int timeout, long uid, const string &session, 
 
 	log_->debug("%s-->uid:%ld session:%s rv.size:%lu", fun, uid, session.c_str(), rv.size());
 
-  single_uid_commend(fun, timeout, suid, args, s_session_info_.data, rv);
+  single_uid_commend(fun, timeout, suid, args, s_session_info_.data(), rv);
 
 	for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     uint64_t addr = it->first;
@@ -468,7 +546,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
        it != disp_uids.end(); ++it) {
     vector<string> &args = addr_cmd.insert(pair< uint64_t, vector<string> >(it->first, vector<string>())).first->second;
     args.push_back("EVALSHA");
-    args.push_back(s_multi_.sha1);
+    args.push_back(s_multi_.sha1());
     args.push_back(boost::lexical_cast<string>(it->second.size()));
 
     for (set<string>::const_iterator jt = it->second.begin();
@@ -480,7 +558,7 @@ void OnlineCtrl::get_multi(int timeout, long actor, const vector<long> &uids,
   }
 
   RedisRvs rv;
-  re_->cmd(rv, sactor.c_str(), addr_cmd, timeout, s_multi_.data, false);
+  re_->cmd(rv, sactor.c_str(), addr_cmd, timeout, s_multi_.data(), false);
   // ================================
   for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
     uint64_t addr = it->first;
@@ -521,7 +599,7 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count, std::vector< std::
     vector<string> &args = addr_cmd.insert(pair< uint64_t, vector<string> >(it->second, vector<string>())).first->second;    
 
     args.push_back("EVALSHA");
-    args.push_back(script.sha1);
+    args.push_back(script.sha1());
     args.push_back("2");
     args.push_back(boost::lexical_cast<string>(stamp));
     args.push_back(boost::lexical_cast<string>(count));
@@ -529,7 +607,7 @@ int OnlineCtrl::timeout_rm(int timeout, int stamp, int count, std::vector< std::
   }
 
   RedisRvs rv;
-  re_->cmd(rv, "timeout_rm", addr_cmd, timeout, script.data, false);
+  re_->cmd(rv, "timeout_rm", addr_cmd, timeout, script.data(), false);
 
 
   for (RedisRvs::const_iterator it = rv.begin(); it != rv.end(); ++it) {
@@ -590,7 +668,7 @@ int OnlineCtrl::syn(int timeout, long uid, const proto_syn &proto, proto_idx_pai
 
 
 	RedisRvs rv;  
-  single_uid_commend(fun, timeout, suid, args, script.data, rv);
+  single_uid_commend(fun, timeout, suid, args, script.data(), rv);
 
   return rv_check_syn(uid, rv, idx);
 
@@ -634,33 +712,25 @@ int OnlineCtrl::rv_check_syn(long uid, const RedisRvs &rv, proto_idx_pair &idx)
 
 int OnlineCtrl::gen_proto_args(int tp, const void *proto, vector<string> &args)
 {
-  switch (tp) {
-  case REQ_SYN:
-    {
-      const proto_syn *p = (const proto_syn *)proto;
-      return p->keys(args);
-    }
 
-  case REQ_FIN:
-    {
-      const proto_fin *p = (const proto_fin *)proto;
-      return p->keys(args);
-    }
+  if (REQ_SYN == tp) {
+    const proto_syn *p = (const proto_syn *)proto;
+    return p->keys(args);
 
-  case REQ_FIN_DELAY:
-    {
-      const proto_fin_delay *p = (const proto_fin_delay *)proto;
-      return p->keys(args);
-    }
-  case REQ_UPIDX:
-    {
-      const proto_upidx *p = (const proto_upidx *)proto;
-      return p->keys(args);
-    }
-   
-  default:
+  } else if (REQ_FIN == tp) {
+    const proto_fin *p = (const proto_fin *)proto;
+    return p->keys(args);
+
+  } else if (REQ_FIN_DELAY == tp) {
+    const proto_fin_delay *p = (const proto_fin_delay *)proto;
+    return p->keys(args);
+
+  } else if (REQ_UPIDX == tp) {
+    const proto_upidx *p = (const proto_upidx *)proto;
+    return p->keys(args);
+
+  } else {
     return args.size();
-
   }
 
 }
@@ -669,26 +739,24 @@ void OnlineCtrl::gen_redis_args(int tp, long uid, const void *proto, vector<stri
 {
   // tp: 0 unknown, 1 syn, 2 fin, 3 fin_delay 4 upidx
   script_t *script = NULL;
-  switch (tp) {
-  case REQ_SYN:
+  if (REQ_SYN == tp) {
     script = &s_syn_;
-    break;
-  case REQ_FIN:
-    script = &s_fin_;
-    break;
-  case REQ_FIN_DELAY:
-    script = &s_fin_delay_;
-    break;
-  case REQ_UPIDX:
-    script = &s_upidx_;
-    break;
 
-  default:
+  } else if (REQ_FIN == tp) {
+    script = &s_fin_;
+
+  } else if (REQ_FIN_DELAY == tp) {
+    script = &s_fin_delay_;
+
+  } else if (REQ_UPIDX == tp) {
+    script = &s_upidx_;
+
+  } else {
     return;
   }
 
   args.push_back("EVALSHA");
-  args.push_back(script->sha1);
+  args.push_back(script->lookup_sha1(re_));
   args.push_back("KEY_SUM");
 
   args.push_back(boost::lexical_cast<string>(uid));
@@ -712,7 +780,7 @@ int OnlineCtrl::fin_delay(int timeout, long uid, const proto_fin_delay &proto)
   gen_redis_args(REQ_FIN_DELAY, uid, &proto, args);
 
 	RedisRvs rv;  
-  single_uid_commend(fun, timeout, suid, args, script.data, rv);
+  single_uid_commend(fun, timeout, suid, args, script.data(), rv);
 
 
   return rv_check_fin_delay(uid, rv);
@@ -764,7 +832,7 @@ int OnlineCtrl::fin(int timeout, long uid, const proto_fin &proto, std::string &
   gen_redis_args(REQ_FIN, uid, &proto, args);
 
 	RedisRvs rv;  
-  single_uid_commend(fun, timeout, suid, args, script.data, rv);
+  single_uid_commend(fun, timeout, suid, args, script.data(), rv);
 
   return rv_check_fin(uid, rv, cli_info);
 
@@ -816,7 +884,7 @@ int OnlineCtrl::upidx(int timeout, long uid, const proto_upidx &proto, proto_idx
   gen_redis_args(REQ_UPIDX, uid, &proto, args);
 
 	RedisRvs rv;  
-  single_uid_commend(fun, timeout, suid, args, script.data, rv);
+  single_uid_commend(fun, timeout, suid, args, script.data(), rv);
 
   return rv_check_upidx(uid, rv, idx);
 }
