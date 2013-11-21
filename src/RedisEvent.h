@@ -158,6 +158,8 @@ class RedisEvent {
            double timeout
                  //           const std::string &lua_code, bool iseval
            );
+  void *add_repeat_timer(void *data, void (*cb)(void *), double intv);
+  void rm_repeat_timer(void *timer);
 
 	struct ev_loop *loop() { return loop_; }
   double time_now() { return ev_now(EV_DEFAULT); }

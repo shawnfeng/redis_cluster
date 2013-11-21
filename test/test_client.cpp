@@ -66,6 +66,10 @@ void *thread_cb(void* args)
 	return NULL;
 }
 
+static void repeat_timer_cb(void *d)
+{
+  g_log.info("repeat_timer_cb out %s", (char *)d);
+}
 
 int main (int argc, char **argv)
 {
@@ -108,6 +112,11 @@ int main (int argc, char **argv)
 
 
 	g_log.info("MAIN-->hold here");
+
+  void *t = g_re.add_repeat_timer((void *)"TTTT", repeat_timer_cb, 1);
+
+  sleep(20);
+  g_re.rm_repeat_timer(t);
   pause();
 	
 	return 1;

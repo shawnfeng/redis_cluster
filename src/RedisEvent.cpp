@@ -423,6 +423,57 @@ void RedisEvent::cmd_async(long key, void *data, void (*callback)(const RedisRvs
 
 }
 
+struct rep_ev_timer {
+  ev_timer timer;
+  void *data;
+  void (*cb)(void *);
+
+};
+
+static void repeat_timer_cb(EV_P_ ev_timer *w, int revents)
+{
+  struct rep_ev_timer *rt = (struct rep_ev_timer *)w;
+  rt->cb(rt->data);
+  
+  ev_timer_again (EV_DEFAULT, w);
+}
+
+
+void *RedisEvent::add_repeat_timer(void *data, void (*cb)(void *), double intv)
+{
+	const char *fun = "add_repeat_timer";
+  log_->info("%s-->d:%p cb:%p intv:%lf", fun, data, cb, intv);
+
+  // ==========lock==================
+  boost::mutex::scoped_lock lock(mutex_);
+  rep_ev_timer *rt = new rep_ev_timer;
+  rt->data = data;
+  rt->cb = cb;
+
+  struct ev_timer *timer = (struct ev_timer *)rt;
+
+  ev_init(timer, repeat_timer_cb);
+  timer->repeat = intv;
+  ev_timer_again(loop_, timer);
+
+	ev_async_send (loop_, &async_w_);
+
+  return rt;
+}
+void RedisEvent::rm_repeat_timer(void *t)
+{
+	const char *fun = "rm_repeat_timer";
+  log_->info("%s-->%p", fun, t);
+
+  boost::mutex::scoped_lock lock(mutex_);
+  struct ev_timer *timer = (struct ev_timer *)t;
+  ev_timer_stop(loop_, timer);
+
+  struct rep_ev_timer *rt = (struct rep_ev_timer *)t;
+  delete rt;
+}
+
+
 
 void RedisEvent::cmd(RedisRvs &rv,
                      const char *log_key,
