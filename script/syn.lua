@@ -76,6 +76,13 @@ end
 --redis.call('ZADD', kc, st, klc)
 redis.call('ZREM', kc, klc)
 
+-- WRITE STAT
+redis.call('ZINCRBY', 'RANK_W', 1, uid)
+local cn = redis.call('ZCARD', 'RANK_W')
+if cn > 1000 then
+   redis.call('ZREMRANGEBYRANK', 'RANK_W', 0, cn-1000)
+end
+
 
 return {0, tonumber(sid)}
 

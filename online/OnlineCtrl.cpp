@@ -60,9 +60,10 @@ static bool check_sha1(const char *path, string &data, string &sha1)
 static void cmd_cb_syn(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
 {
   OnlineCtrl *me = (OnlineCtrl *)oc;
-
-  me->log()->trace("cmd_cb_syn tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
-             tm, istmout, uid, oc, rv.size());
+  if (istmout) {
+    me->log()->warn("cmd_cb_syn tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+                    tm, istmout, uid, oc, rv.size());
+  }
 
   me->check_scritp_load(REQ_SYN, rv);
   proto_idx_pair idx;
@@ -73,9 +74,10 @@ static void cmd_cb_syn(const RedisRvs &rv, double tm, bool istmout, long uid, vo
 static void cmd_cb_fin(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
 {
   OnlineCtrl *me = (OnlineCtrl *)oc;
-
-  me->log()->trace("cmd_cb_fin tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
-             tm, istmout, uid, oc, rv.size());
+  if (istmout) {
+    me->log()->warn("cmd_cb_fin tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+                    tm, istmout, uid, oc, rv.size());
+  }
 
   me->check_scritp_load(REQ_FIN, rv);
   string cli_info;
@@ -86,8 +88,10 @@ static void cmd_cb_fin(const RedisRvs &rv, double tm, bool istmout, long uid, vo
 static void cmd_cb_fin_delay(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
 {
   OnlineCtrl *me = (OnlineCtrl *)oc;
-  me->log()->trace("cmd_cb_fin_delay tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
-             tm, istmout, uid, oc, rv.size());
+  if (istmout) {
+    me->log()->warn("cmd_cb_fin_delay tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+                    tm, istmout, uid, oc, rv.size());
+  }
 
 
   me->check_scritp_load(REQ_FIN_DELAY, rv);
@@ -97,9 +101,10 @@ static void cmd_cb_fin_delay(const RedisRvs &rv, double tm, bool istmout, long u
 static void cmd_cb_upidx(const RedisRvs &rv, double tm, bool istmout, long uid, void *oc)
 {
   OnlineCtrl *me = (OnlineCtrl *)oc;
-  me->log()->trace("cmd_cb_upidx tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
-             tm, istmout, uid, oc, rv.size());
-
+  if (istmout) {
+    me->log()->warn("cmd_cb_upidx tm:%lf istmout:%d uid:%ld data:%p rvsize:%lu",
+                    tm, istmout, uid, oc, rv.size());
+  }
   me->check_scritp_load(REQ_UPIDX, rv);
 
   proto_idx_pair idx;

@@ -19,6 +19,14 @@ local delay = KEYS[6]
 local klc = 'L.'..uid..'.'..lc
 local kc = 'DLY_CK'
 
+-- WRITE STAT
+redis.call('ZINCRBY', 'RANK_W', 1, uid)
+local cn = redis.call('ZCARD', 'RANK_W')
+if cn > 1000 then
+   redis.call('ZREMRANGEBYRANK', 'RANK_W', 0, cn-1000)
+end
+
+
 local bgate = redis.call('HGET', klc, 'GATE')
 
 if bgate == gate then
