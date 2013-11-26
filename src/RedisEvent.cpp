@@ -332,6 +332,7 @@ void RedisEvent::cmd_async(long key, void *data, void (*callback)(const RedisRvs
                            //                           const std::string &lua_code, bool iseval
                            )
 {
+  TimeUse tu;
 	const char *fun = "RedisEvent::cmd_async";
 
 	log_->debug("%s-->k:%s size:%lu", fun, log_key, addr_cmd.size());
@@ -348,6 +349,13 @@ void RedisEvent::cmd_async(long key, void *data, void (*callback)(const RedisRvs
 
   // ==========lock==================
   boost::mutex::scoped_lock lock(mutex_);
+
+  long inv = tu.intv_reset();
+  if (inv > 1) {
+    log_->info("%s-->get lock tm:%ld", fun, inv);
+  }
+
+
 
 	cf = u->get_cf();
 	if (cf->f() || cf->d()) {
@@ -420,6 +428,11 @@ void RedisEvent::cmd_async(long key, void *data, void (*callback)(const RedisRvs
   }
 
 	ev_async_send (loop_, &async_w_);
+
+  inv = tu.intv();
+  if (inv > 1) {
+    log_->info("%s-->in lock tm:%ld", fun, inv);
+  }
 
 }
 

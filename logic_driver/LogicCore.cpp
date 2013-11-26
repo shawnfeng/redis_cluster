@@ -147,7 +147,12 @@ void LogicCore::from_sublayer(const string &sublayer_index, const string &pro)
 
   if (ph) ph->process(this, sublayer_index, pb);
 
-  callstat_fn(stat_key, tu.intv(), 0);
+  long inv = tu.intv();
+  if (inv > 1) {
+    log_->info("%s-->tm:%ld t:%d", fun, inv, type);
+  }
+
+  callstat_fn(stat_key, inv, 0);
 
 }
 
